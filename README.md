@@ -23,6 +23,20 @@ bundle exec rackup -p 9292
 
 The server will be running at `http://localhost:9292`.
 
+## Testing
+
+To run the test suite:
+
+```bash
+bundle exec rspec spec/api_spec.rb
+```
+
+This will execute all tests including:
+- **HAPPY Path Tests:** Verify successful API operations (root route, create, get single, get list)
+- **SAD Path Tests:** Verify proper error handling (non-existent resources, invalid JSON)
+
+The test suite uses seeded data from `app/db/seeds/attendance_records.yml` and includes `rack/test` for making HTTP requests to the API.
+
 ## API Documentation
 
 ### 1. Check System Status
