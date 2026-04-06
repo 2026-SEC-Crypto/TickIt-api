@@ -1,14 +1,16 @@
 require 'json'
 require 'securerandom'
+require 'fileutils'
 
 module TickIt
   class AttendanceRecord
-    attr_reader :id, :user_id, :timestamp, :location, :status
+    attr_reader :id, :student_id, :timestamp, :location, :status
 
     def initialize(params)
-      @id = params[:id]|| new_id
-      @student_id = params[:timestamp]|| Time.now.to_i
-      @location = params[:location] #{lat: 24.123, lng: 120.121.456}
+      @id = params[:id] || new_id
+      @student_id = params[:student_id]
+      @timestamp = params[:timestamp] || Time.now.to_i
+      @location = params[:location]
       @status = params[:status]
     end
 
@@ -27,9 +29,8 @@ module TickIt
     end
 
     def save
-      Dir.mkdir('app/db/store') unless Dir.exist?('app/db/store')
+      FileUtils.mkdir_p('app/db/store')
       File.write("app/db/store/#{@id}.txt", to_json)
-      
     end
 
     def self.find(id)
