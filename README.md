@@ -37,6 +37,16 @@ This will execute all tests including:
 
 The test suite uses seeded data from `app/db/seeds/attendance_records.yml` and includes `rack/test` for making HTTP requests to the API.
 
+## Security
+
+To check for known vulnerabilities in project dependencies:
+
+```bash
+bundle audit check --update
+```
+
+This command will scan all gems in your `Gemfile.lock` and alert you to any known security vulnerabilities. Run this regularly as part of your development workflow.
+
 ## API Documentation
 
 ### 1. Check System Status
