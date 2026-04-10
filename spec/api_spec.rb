@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rack/test'
 require 'json'
 require 'fileutils'
@@ -5,15 +7,15 @@ require 'yaml'
 require_relative '../app/controllers/app'
 require_relative '../app/models/attendance_record'
 
+# Load seed data
+DATA = YAML.safe_load_file('app/db/seeds/attendance_records.yml')['attendance_records']
+
 RSpec.describe 'TickIt API' do
   include Rack::Test::Methods
 
   def app
     TickIt::Api
   end
-
-  # Load seed data
-  DATA = YAML.safe_load_file('app/db/seeds/attendance_records.yml')['attendance_records']
 
   # Setup: Create test data directory and clean before tests
   before(:all) do
@@ -37,7 +39,7 @@ RSpec.describe 'TickIt API' do
       it 'returns 200 OK and confirms API is running' do
         get '/'
         expect(last_response.status).to eq(200)
-        
+
         body = JSON.parse(last_response.body)
         expect(body['message']).to eq('TickIt API is up and running!')
       end
@@ -49,9 +51,9 @@ RSpec.describe 'TickIt API' do
         payload = DATA[0].to_json
 
         post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
-        
+
         expect(last_response.status).to eq(201)
-        
+
         body = JSON.parse(last_response.body)
         expect(body['message']).to eq('Attendance successfully recorded')
         expect(body).to have_key('id')
@@ -65,15 +67,15 @@ RSpec.describe 'TickIt API' do
         # First, create a record using seeded data
         payload = DATA[1].to_json
         post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
-        
+
         created_body = JSON.parse(last_response.body)
         record_id = created_body['id']
 
         # Now retrieve it
         get "/api/v1/attendances/#{record_id}"
-        
+
         expect(last_response.status).to eq(200)
-        
+
         body = JSON.parse(last_response.body)
         expect(body['id']).to eq(record_id)
         expect(body['student_id']).to eq(DATA[1]['student_id'])
@@ -92,9 +94,9 @@ RSpec.describe 'TickIt API' do
 
         # Retrieve all
         get '/api/v1/attendances'
-        
+
         expect(last_response.status).to eq(200)
-        
+
         body = JSON.parse(last_response.body)
         expect(body).to have_key('attendance_ids')
         expect(body['attendance_ids'].length).to eq(DATA.length)
@@ -108,9 +110,9 @@ RSpec.describe 'TickIt API' do
     describe 'GET /api/v1/attendances/{invalid_id}' do
       it 'returns 404 when record does not exist' do
         get '/api/v1/attendances/nonexistent_id_12345'
-        
+
         expect(last_response.status).to eq(404)
-        
+
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Attendance record not found')
       end

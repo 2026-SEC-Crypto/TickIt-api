@@ -1,12 +1,14 @@
+# frozen_string_literal: true
+
 source 'https://rubygems.org'
 
-gem 'roda'
-gem 'json'
-gem 'rackup'
-gem 'puma'
 gem 'bundler-audit'
+gem 'json'
+gem 'puma'
+gem 'rackup'
+gem 'roda'
 
 group :development, :test do
-  gem 'rspec'
   gem 'rack-test'
+  gem 'rspec'
 end

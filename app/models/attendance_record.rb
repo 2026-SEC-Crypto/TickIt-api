@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
 require 'json'
 require 'securerandom'
 require 'fileutils'
 
 module TickIt
+  # Represents an attendance record with student information and timestamp
   class AttendanceRecord
     attr_reader :id, :student_id, :timestamp, :location, :status
 
@@ -18,14 +21,14 @@ module TickIt
       SecureRandom.hex(8)
     end
 
-    def to_json(options = {})
+    def to_json(_options = {})
       JSON.generate({
-        id: @id,
-        student_id: @student_id,
-        timestamp: @timestamp,
-        location: @location,
-        status: @status
-      })
+                      id: @id,
+                      student_id: @student_id,
+                      timestamp: @timestamp,
+                      location: @location,
+                      status: @status
+                    })
     end
 
     def save
@@ -36,16 +39,15 @@ module TickIt
     def self.find(id)
       path = "app/db/store/#{id}.txt"
       return nil unless File.exist?(path)
+
       data = JSON.parse(File.read(path), symbolize_names: true)
       new(data)
-      
     end
 
     def self.all
       Dir.glob('app/db/store/*.txt').map do |file|
-        File.basename(file, ".txt")
+        File.basename(file, '.txt')
       end
     end
-  
   end
 end
