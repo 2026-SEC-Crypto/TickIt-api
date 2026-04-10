@@ -47,6 +47,16 @@ bundle audit check --update
 
 This command will scan all gems in your `Gemfile.lock` and alert you to any known security vulnerabilities. Run this regularly as part of your development workflow.
 
+## Code Quality
+
+To check code style and quality issues using RuboCop:
+
+```bash
+rubocop .
+```
+
+This will analyze all Ruby files in the project and report any style violations or code quality issues according to the RuboCop configuration in `.rubocop.yml`.
+
 ## API Documentation
 
 ### 1. Check System Status
