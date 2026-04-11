@@ -36,7 +36,7 @@ task :print_env do
   puts "Environment: #{ENV['RACK_ENV'] || 'development'}"
 end
 
-desc 'Run application console (pry)'
+desc 'Run application console (pry; Hirb enabled via .pryrc)'
 task console: :print_env do
   require_relative 'require_app'
   require_app('models')

@@ -42,8 +42,8 @@ RSpec.describe 'TickIt API' do
   end
 
   describe 'HAPPY Path Tests' do
-    describe 'configuration security' do
-      it 'fails fast when DATABASE_URL is not set (does not start with implicit DB)' do
+    describe 'DATABASE_URL configuration' do
+      it 'HAPPY: boot fails safely when DATABASE_URL is not in environment (guard works)' do
         Dir.mktmpdir do |dir|
           secrets = File.join(dir, 'secrets.yml')
           File.write(secrets, "test:\n  # no DATABASE_URL — intentional for this spec\n")
@@ -130,6 +130,53 @@ RSpec.describe 'TickIt API' do
       end
     end
 
+    describe 'GET /api/v1/students' do
+      it 'returns a JSON list of all students' do
+        get '/api/v1/students'
+
+        expect(last_response.status).to eq(200)
+        body = JSON.parse(last_response.body)
+        expect(body['students']).to be_an(Array)
+        expect(body['students'].length).to eq(DATA.length)
+        numbers = body['students'].map { |s| s['student_number'] }
+        expect(numbers).to include(DATA[0]['student_id'])
+      end
+    end
+
+    describe 'GET /api/v1/students/:id' do
+      it 'returns a single student when the id exists' do
+        student = TickIt::Student.first!
+
+        get "/api/v1/students/#{student.id}"
+
+        expect(last_response.status).to eq(200)
+        body = JSON.parse(last_response.body)
+        expect(body['student']).to be_a(Hash)
+        expect(body['student']['id']).to eq(student.id)
+        expect(body['student']['email']).to eq('test0@example.com')
+        expect(body['student']['student_number']).to eq(DATA[0]['student_id'])
+      end
+    end
+
+    describe 'POST /api/v1/students' do
+      it 'creates a student and returns 201 with the new resource' do
+        payload = {
+          name: 'New Student',
+          email: 'new.student@example.com',
+          student_number: 'B10909999'
+        }.to_json
+
+        post '/api/v1/students', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(201)
+        body = JSON.parse(last_response.body)
+        expect(body['message']).to eq('Student created')
+        expect(body['student']['name']).to eq('New Student')
+        expect(body['student']['email']).to eq('new.student@example.com')
+        expect(body['student']['student_number']).to eq('B10909999')
+      end
+    end
+
     describe 'GET /api/v1/events' do
       it 'returns a JSON list of all events' do
         TickIt::Event.create(
@@ -198,6 +245,42 @@ RSpec.describe 'TickIt API' do
   end
 
   describe 'SAD Path Tests' do
+    describe 'GET /' do
+      it 'does not treat root as a JSON POST endpoint' do
+        post '/', '{}', { 'CONTENT_TYPE' => 'application/json' }
+        expect(last_response.status).not_to eq(200)
+      end
+    end
+
+    describe 'GET /api/v1/attendances' do
+      it 'returns an empty attendance id list when there are no records' do
+        get '/api/v1/attendances'
+
+        expect(last_response.status).to eq(200)
+        body = JSON.parse(last_response.body)
+        expect(body['attendance_ids']).to eq([])
+      end
+    end
+
+    describe 'POST /api/v1/attendances' do
+      it 'returns 400 when the body is not valid JSON' do
+        post '/api/v1/attendances', 'not-json', { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Invalid JSON format')
+      end
+
+      it 'returns 404 when the student_number does not exist' do
+        payload = { student_id: 'NO_SUCH_STUDENT', location: { lat: 0, lng: 0 } }.to_json
+        post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(404)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Student not found')
+      end
+    end
+
     describe 'GET /api/v1/attendances/{invalid_id}' do
       it 'returns 404 when record does not exist' do
         get '/api/v1/attendances/nonexistent_id_12345'
@@ -206,6 +289,73 @@ RSpec.describe 'TickIt API' do
 
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Attendance record not found')
+      end
+    end
+
+    describe 'GET /api/v1/students' do
+      it 'returns an empty list when no students exist' do
+        db = TickIt::Api::DB
+        db[:attendance_records].delete
+        db[:students].delete
+
+        get '/api/v1/students'
+
+        expect(last_response.status).to eq(200)
+        expect(JSON.parse(last_response.body)['students']).to eq([])
+      end
+    end
+
+    describe 'GET /api/v1/students/:id' do
+      it 'returns 404 when the student id does not exist' do
+        get '/api/v1/students/999999'
+
+        expect(last_response.status).to eq(404)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Student not found')
+      end
+    end
+
+    describe 'POST /api/v1/students' do
+      it 'returns 400 when required fields are missing' do
+        payload = { name: 'Only Name' }.to_json
+        post '/api/v1/students', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Missing required fields')
+        expect(body['missing']).to include('email', 'student_number')
+      end
+
+      it 'returns 400 when JSON is invalid' do
+        post '/api/v1/students', '{', { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Invalid JSON format')
+      end
+
+      it 'returns 400 when email or student_number is duplicated' do
+        payload = {
+          name: 'Duplicate',
+          email: 'test0@example.com',
+          student_number: 'UNIQUE001'
+        }.to_json
+        post '/api/v1/students', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Duplicate email or student_number')
+      end
+    end
+
+    describe 'GET /api/v1/events' do
+      it 'returns an empty list when no events exist' do
+        TickIt::Api::DB[:events].delete
+
+        get '/api/v1/events'
+
+        expect(last_response.status).to eq(200)
+        expect(JSON.parse(last_response.body)['events']).to eq([])
       end
     end
 
@@ -233,6 +383,14 @@ RSpec.describe 'TickIt API' do
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Missing required fields')
         expect(body['missing']).to include('start_time', 'end_time')
+      end
+
+      it 'returns 400 when JSON is invalid' do
+        post '/api/v1/events', 'not{json', { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Invalid JSON format')
       end
     end
   end

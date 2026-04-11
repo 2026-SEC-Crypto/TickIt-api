@@ -31,6 +31,62 @@ module TickIt
       # /api/v1/...
       r.on 'api' do
         r.on 'v1' do
+          r.on 'students' do
+            r.is String do |id_segment|
+              r.get do
+                id_str = id_segment.sub(/\.json\z/, '')
+                pk = Integer(id_str, exception: false)
+                student = (pk&.positive? && TickIt::Student.with_pk(pk))
+                if student
+                  { student: student.to_api_hash }.to_json
+                else
+                  response.status = 404
+                  { error: 'Student not found' }.to_json
+                end
+              end
+            end
+
+            r.is do
+              r.get do
+                students = TickIt::Student.order(:id).map(&:to_api_hash)
+                { students: students }.to_json
+              end
+
+              r.post do
+                body = JSON.parse(r.body.read, symbolize_names: true)
+                required = %i[name email student_number]
+                missing = required.select do |key|
+                  val = body[key]
+                  val.nil? || (val.is_a?(String) && val.strip.empty?)
+                end
+                if missing.any?
+                  response.status = 400
+                  next(
+                    {
+                      error: 'Missing required fields',
+                      missing: missing.map(&:to_s)
+                    }.to_json
+                  )
+                end
+
+                student = TickIt::Student.create(
+                  name: body[:name].to_s.strip,
+                  email: body[:email].to_s.strip,
+                  student_number: body[:student_number].to_s.strip
+                )
+
+                response.status = 201
+                { message: 'Student created', student: student.to_api_hash }.to_json
+              rescue JSON::ParserError
+                response.status = 400
+                { error: 'Invalid JSON format' }.to_json
+              rescue Sequel::UniqueConstraintViolation
+                response.status = 400
+                { error: 'Duplicate email or student_number' }.to_json
+              end
+            end
+          end
+
           r.on 'events' do
             r.is String do |id_segment|
               r.get do

@@ -6,5 +6,16 @@ module TickIt
     plugin :timestamps, update_on_create: true
 
     one_to_many :attendance_records, class: 'TickIt::AttendanceRecord'
+
+    def to_api_hash
+      {
+        id: id,
+        name: name,
+        email: email,
+        student_number: student_number,
+        created_at: created_at&.iso8601,
+        updated_at: updated_at&.iso8601
+      }
+    end
   end
 end
