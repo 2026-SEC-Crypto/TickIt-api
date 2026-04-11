@@ -1,2 +1,7 @@
 app/db/store/*
 .DS_Store
+*.db
+.bundle/
+vendor/
+config/secrets.yml
+db/local/*.db
