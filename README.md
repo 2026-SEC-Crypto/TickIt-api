@@ -15,7 +15,26 @@ TickIt is a backend API designed for a "Secure Physical Attendance & Ticket Vali
 bundle install
 ```
 
-2. Start the API server:
+2. Set up configuration (copy the example secrets file):
+
+```bash
+cp config/secrets-example.yml config/secrets.yml
+```
+
+Edit `config/secrets.yml` with your database configuration if needed.
+
+3. Set up databases:
+
+```bash
+# Create and migrate development database
+RACK_ENV=development bundle exec rake db:migrate
+
+# Create and migrate test database
+RACK_ENV=test bundle exec rake db:migrate
+
+```
+
+4. Start the API server:
 
 ```bash
 bundle exec rackup -p 9292
@@ -23,26 +42,42 @@ bundle exec rackup -p 9292
 
 The server will be running at `http://localhost:9292`.
 
+## Database Tasks
+
+View the status of your database:
+
+```bash
+# Check development database
+RACK_ENV=development bundle exec rake db:status
+
+# Check test database
+RACK_ENV=test bundle exec rake db:status
+```
+
 ## Testing
 
 To run the test suite:
 
 ```bash
-bundle exec rspec spec/api_spec.rb
+bundle exec rake spec
 ```
 
 This will execute all tests including:
 - **HAPPY Path Tests:** Verify successful API operations (root route, create, get single, get list)
 - **SAD Path Tests:** Verify proper error handling (non-existent resources, invalid JSON)
 
-The test suite uses seeded data from `app/db/seeds/attendance_records.yml` and includes `rack/test` for making HTTP requests to the API.
+To run API specs only:
+
+```bash
+bundle exec rake api_spec
+```
 
 ## Security
 
 To check for known vulnerabilities in project dependencies:
 
 ```bash
-bundle audit check --update
+bundle exec rake audit
 ```
 
 This command will scan all gems in your `Gemfile.lock` and alert you to any known security vulnerabilities. Run this regularly as part of your development workflow.
@@ -52,10 +87,26 @@ This command will scan all gems in your `Gemfile.lock` and alert you to any know
 To check code style and quality issues using RuboCop:
 
 ```bash
-rubocop .
+bundle exec rake style
 ```
 
-This will analyze all Ruby files in the project and report any style violations or code quality issues according to the RuboCop configuration in `.rubocop.yml`.
+This will run all tests and audits, then check code style.
+
+## Interactive Console
+
+To run an interactive Pry console with the application loaded:
+
+```bash
+bundle exec rake console
+```
+
+## Available Rake Tasks
+
+To view all available tasks:
+
+```bash
+bundle exec rake -T
+```
 
 ## API Documentation
 
