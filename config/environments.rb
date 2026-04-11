@@ -10,9 +10,11 @@ module TickIt
     plugin :environments
 
     # load config secrets into local environment variables (ENV)
+    # FIGARO_SECRETS_PATH may point to a temp file in tests (e.g. missing DATABASE_URL check)
+    secrets_path = ENV.fetch('FIGARO_SECRETS_PATH', File.expand_path('config/secrets.yml'))
     Figaro.application = Figaro::Application.new(
       environment: environment,
-      path: File.expand_path('config/secrets.yml')
+      path: secrets_path
     )
     Figaro.load
 
@@ -23,6 +25,10 @@ module TickIt
 
     # Connect and make the database accessible to other classes
     db_url = ENV.delete('DATABASE_URL')
+    if db_url.nil? || db_url.strip.empty?
+      raise 'DATABASE_URL is missing. Copy config/secrets-example.yml to config/secrets.yml and set DATABASE_URL.'
+    end
+
     DB = Sequel.connect("#{db_url}?encoding=utf8")
     def self.DB # rubocop:disable Naming/MethodName
       DB

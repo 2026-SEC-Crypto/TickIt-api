@@ -38,7 +38,10 @@ end
 
 desc 'Run application console (pry)'
 task console: :print_env do
-  sh 'pry -r ./config/environments'
+  require_relative 'require_app'
+  require_app('models')
+  require 'pry'
+  Pry.start(TickIt)
 end
 
 namespace :db do # rubocop:disable Metrics/BlockLength

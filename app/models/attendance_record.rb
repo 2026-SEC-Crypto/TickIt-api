@@ -1,53 +1,29 @@
 # frozen_string_literal: true
 
-require 'json'
-require 'securerandom'
-require 'fileutils'
-
 module TickIt
-  # Represents an attendance record with student information and timestamp
-  class AttendanceRecord
-    attr_reader :id, :student_id, :timestamp, :location, :status
+  # Links a student to an event with check-in/out state
+  class AttendanceRecord < Sequel::Model(TickIt::Api::DB[:attendance_records])
+    plugin :timestamps, update_on_create: true
 
-    def initialize(params)
-      @id = params[:id] || new_id
-      @student_id = params[:student_id]
-      @timestamp = params[:timestamp] || Time.now.to_i
-      @location = params[:location]
-      @status = params[:status]
+    many_to_one :student, class: 'TickIt::Student'
+    many_to_one :event, class: 'TickIt::Event'
+
+    # Primary key lookup for API routes (invalid or non-numeric id returns nil)
+    def self.with_pk_string(id_str)
+      pk = Integer(id_str.to_s, exception: false)
+      return nil unless pk&.positive?
+
+      with_pk(pk)
     end
 
-    def new_id
-      SecureRandom.hex(8)
-    end
-
-    def to_json(_options = {})
-      JSON.generate({
-                      id: @id,
-                      student_id: @student_id,
-                      timestamp: @timestamp,
-                      location: @location,
-                      status: @status
-                    })
-    end
-
-    def save
-      FileUtils.mkdir_p('app/db/store')
-      File.write("app/db/store/#{@id}.txt", to_json)
-    end
-
-    def self.find(id)
-      path = "app/db/store/#{id}.txt"
-      return nil unless File.exist?(path)
-
-      data = JSON.parse(File.read(path), symbolize_names: true)
-      new(data)
-    end
-
-    def self.all
-      Dir.glob('app/db/store/*.txt').map do |file|
-        File.basename(file, '.txt')
-      end
+    def api_json_hash
+      {
+        id: id,
+        student_id: student.student_number,
+        status: status,
+        check_in_time: check_in_time&.iso8601,
+        event_id: event_id
+      }
     end
   end
 end
