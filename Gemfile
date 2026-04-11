@@ -7,10 +7,10 @@ gem 'figaro'
 gem 'json'
 gem 'puma'
 gem 'rackup'
+gem 'rake'
 gem 'roda'
 gem 'sequel'
 gem 'sqlite3'
-gem 'rake'
 
 group :development, :test do
   gem 'pry'

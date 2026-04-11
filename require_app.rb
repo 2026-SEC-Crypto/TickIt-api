@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-def require_app(load_models = nil)
+def require_app(load_models = nil) # rubocop:disable Metrics/MethodLength
   require 'roda'
   require 'figaro'
   require 'sequel'
@@ -19,7 +19,7 @@ def require_app(load_models = nil)
   require_relative 'config/environments'
 
   # Load models if requested
-  if load_models == 'models'
-    Dir.glob('app/models/*.rb').each { |file| require_relative file }
-  end
+  return unless load_models == 'models'
+
+  Dir.glob('app/models/*.rb').sort.each { |file| require_relative file }
 end

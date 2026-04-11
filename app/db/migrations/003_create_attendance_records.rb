@@ -11,8 +11,8 @@ Sequel.migration do
       DateTime :check_out_time
       DateTime :created_at, default: Sequel::CURRENT_TIMESTAMP
       DateTime :updated_at, default: Sequel::CURRENT_TIMESTAMP
-      
-      index [:student_id, :event_id]
+
+      index %i[student_id event_id]
     end
   end
 end

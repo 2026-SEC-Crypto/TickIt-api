@@ -17,12 +17,16 @@ module TickIt
     Figaro.load
 
     # Make the environment variables accessible to other classes
-    def self.config = Figaro.env
+    def self.config
+      Figaro.env
+    end
 
     # Connect and make the database accessible to other classes
     db_url = ENV.delete('DATABASE_URL')
     DB = Sequel.connect("#{db_url}?encoding=utf8")
-    def self.DB = DB # rubocop:disable Naming/MethodName
+    def self.DB # rubocop:disable Naming/MethodName
+      DB
+    end
 
     configure :development, :production do
       plugin :common_logger, $stderr

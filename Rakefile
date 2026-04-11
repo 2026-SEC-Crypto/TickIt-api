@@ -31,7 +31,8 @@ task release_check: %i[spec style audit] do
   puts "\nReady for release!"
 end
 
-task :print_env do # rubocop:disable Rake/Desc
+desc 'Print environment information'
+task :print_env do
   puts "Environment: #{ENV['RACK_ENV'] || 'development'}"
 end
 
@@ -40,8 +41,9 @@ task console: :print_env do
   sh 'pry -r ./config/environments'
 end
 
-namespace :db do
-  task :load do # rubocop:disable Rake/Desc
+namespace :db do # rubocop:disable Metrics/BlockLength
+  desc 'Load the database connection'
+  task :load do
     require_app(nil)
     require 'sequel'
 
@@ -49,7 +51,8 @@ namespace :db do
     @app = TickIt::Api
   end
 
-  task :load_models do # rubocop:disable Rake/Desc
+  desc 'Load model files'
+  task :load_models do
     require_app('models')
   end
 
@@ -62,17 +65,18 @@ namespace :db do
   desc 'Rollback the last migration'
   task rollback: :load do
     puts "Rolling back #{@app.environment} database..."
-    Sequel::Migrator.run(@app.DB, 'app/db/migrations', target: Sequel::Migrator.latest_migration_index(@app.DB, 'app/db/migrations') - 1)
-    puts "✓ Rollback complete"
+    latest_index = Sequel::Migrator.latest_migration_index(@app.DB, 'app/db/migrations')
+    Sequel::Migrator.run(@app.DB, 'app/db/migrations', target: latest_index - 1)
+    puts '✓ Rollback complete'
   end
 
   desc 'Reset the database (drops and recreates)'
-  task reset: [:drop, :migrate] do
-    puts "✓ Database reset complete"
+  task reset: %i[drop migrate] do
+    puts '✓ Database reset complete'
   end
 
   desc 'Seed the database with sample data'
-  task seed: [:migrate, :load_models] do
+  task seed: %i[migrate load_models] do
     puts "Seeding #{@app.environment} database..."
 
     # Create sample data
@@ -86,15 +90,27 @@ namespace :db do
     students.insert(name: 'Carol White', email: 'carol@example.com', student_number: 'STU003')
 
     # Sample events
-    events.insert(name: 'Web Development Workshop', location: 'Room 101', start_time: Time.now, end_time: Time.now + 3600, description: 'Introduction to Web Dev')
-    events.insert(name: 'Security Seminar', location: 'Room 202', start_time: Time.now, end_time: Time.now + 5400, description: 'Application Security Basics')
+    events.insert(
+      name: 'Web Development Workshop',
+      location: 'Room 101',
+      start_time: Time.now,
+      end_time: Time.now + 3600,
+      description: 'Introduction to Web Dev'
+    )
+    events.insert(
+      name: 'Security Seminar',
+      location: 'Room 202',
+      start_time: Time.now,
+      end_time: Time.now + 5400,
+      description: 'Application Security Basics'
+    )
 
     # Sample attendance records
     attendance_records.insert(student_id: 1, event_id: 1, status: 'present', check_in_time: Time.now)
     attendance_records.insert(student_id: 2, event_id: 1, status: 'present', check_in_time: Time.now)
     attendance_records.insert(student_id: 1, event_id: 2, status: 'absent')
 
-    puts "✓ Database seeded"
+    puts '✓ Database seeded'
   end
 
   desc 'Delete all data in database; maintain tables'
@@ -103,7 +119,7 @@ namespace :db do
     @app.DB[:attendance_records].delete
     @app.DB[:events].delete
     @app.DB[:students].delete
-    puts "✓ All data deleted"
+    puts '✓ All data deleted'
   end
 
   desc 'Delete dev or test database file'
@@ -114,17 +130,17 @@ namespace :db do
     end
 
     db_filename = "db/local/#{@app.environment}.db"
-    FileUtils.rm(db_filename) if File.exist?(db_filename)
+    FileUtils.rm_f(db_filename)
     puts "Deleted #{db_filename}"
   end
 
   desc 'Show database status'
   task status: :load do
     puts "Environment: #{@app.environment}"
-    puts "Database URL: #{ENV['DATABASE_URL']}"
+    puts "Database URL: #{ENV.fetch('DATABASE_URL', nil)}"
 
     if @app.DB.tables.empty?
-      puts "Tables: None"
+      puts 'Tables: None'
     else
       puts "Tables: #{@app.DB.tables.join(', ')}"
     end
