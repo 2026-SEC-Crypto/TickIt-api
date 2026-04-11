@@ -6,6 +6,7 @@ require 'fileutils'
 require 'yaml'
 require_relative '../app/controllers/app'
 require_relative '../app/models/attendance_record'
+require_relative 'spec_helper'
 
 # Load seed data
 DATA = YAML.safe_load_file('app/db/seeds/attendance_records.yml')['attendance_records']
