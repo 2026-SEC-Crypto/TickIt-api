@@ -13,9 +13,9 @@ gem 'sequel'
 gem 'sqlite3'
 
 group :development, :test do
-  gem 'hirb'
   gem 'pry'
   gem 'rack-test'
   gem 'rspec'
   gem 'rubocop'
+  gem 'table_print'
 end
