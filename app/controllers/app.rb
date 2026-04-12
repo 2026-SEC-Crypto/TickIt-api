@@ -36,7 +36,7 @@ module TickIt
               r.get do
                 id_str = id_segment.sub(/\.json\z/, '')
                 pk = Integer(id_str, exception: false)
-                student = (pk&.positive? && TickIt::Student.with_pk(pk))
+                student = pk&.positive? && TickIt::Student.with_pk(pk)
                 if student
                   { student: student.to_api_hash }.to_json
                 else
@@ -92,7 +92,7 @@ module TickIt
               r.get do
                 id_str = id_segment.sub(/\.json\z/, '')
                 pk = Integer(id_str, exception: false)
-                event = (pk&.positive? && TickIt::Event.with_pk(pk))
+                event = pk&.positive? && TickIt::Event.with_pk(pk)
                 if event
                   { event: event.to_api_hash }.to_json
                 else
@@ -140,7 +140,7 @@ module TickIt
               rescue JSON::ParserError
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
-              rescue ArgumentError, Date::Error
+              rescue ArgumentError
                 response.status = 400
                 { error: 'Invalid start_time or end_time' }.to_json
               end

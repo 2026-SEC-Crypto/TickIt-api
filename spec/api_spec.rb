@@ -11,11 +11,11 @@ require_relative 'spec_helper'
 # Load seed-style payloads (student_id is student_number in the API)
 DATA = YAML.safe_load_file('app/db/seeds/attendance_records.yml')['attendance_records']
 
+# Foreign keys reference students/events — delete dependents first
+TABLES_CLEAR_ORDER = %i[attendance_records events students].freeze
+
 RSpec.describe 'TickIt API' do
   include Rack::Test::Methods
-
-  # Foreign keys reference students/events — delete dependents first
-  TABLES_CLEAR_ORDER = %i[attendance_records events students].freeze
 
   def app
     TickIt::Api

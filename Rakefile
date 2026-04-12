@@ -44,7 +44,7 @@ task console: :print_env do
   Pry.start(TickIt)
 end
 
-namespace :db do # rubocop:disable Metrics/BlockLength
+namespace :db do
   desc 'Load the database connection'
   task :load do
     require_app(nil)

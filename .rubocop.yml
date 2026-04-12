@@ -3,6 +3,11 @@ AllCops:
   SuggestExtensions: false
 
 Metrics/BlockLength:
-  Max: 50
+  Max: 180
+  Exclude:
+    - 'spec/**/*'
+
+Metrics/ClassLength:
+  Max: 200
   Exclude:
     - 'spec/**/*'
