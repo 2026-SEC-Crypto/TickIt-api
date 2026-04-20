@@ -35,8 +35,7 @@ module TickIt
             r.is String do |id_segment|
               r.get do
                 id_str = id_segment.sub(/\.json\z/, '')
-                pk = Integer(id_str, exception: false)
-                student = pk&.positive? && TickIt::Student.with_pk(pk)
+                student = TickIt::Student.with_pk(id_str)
                 if student
                   { student: student.to_api_hash }.to_json
                 else
@@ -80,6 +79,9 @@ module TickIt
               rescue JSON::ParserError
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
+              rescue Sequel::MassAssignmentRestriction
+                response.status = 400
+                { error: 'Illegal mass assignment detected' }.to_json
               rescue Sequel::UniqueConstraintViolation
                 response.status = 400
                 { error: 'Duplicate email or student_number' }.to_json
@@ -91,8 +93,9 @@ module TickIt
             r.is String do |id_segment|
               r.get do
                 id_str = id_segment.sub(/\.json\z/, '')
-                pk = Integer(id_str, exception: false)
-                event = pk&.positive? && TickIt::Event.with_pk(pk)
+                #pk = Integer(id_str, exception: false)
+                #event = pk&.positive? && TickIt::Event.with_pk(pk)
+                event = TickIt::Event.with_pk(id_str)
                 if event
                   { event: event.to_api_hash }.to_json
                 else
@@ -140,6 +143,9 @@ module TickIt
               rescue JSON::ParserError
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
+              rescue Sequel::MassAssignmentRestriction
+                response.status = 400
+                { error: 'Illegal mass assignment detected' }.to_json
               rescue ArgumentError
                 response.status = 400
                 { error: 'Invalid start_time or end_time' }.to_json
@@ -169,6 +175,10 @@ module TickIt
 
               r.post do # create new record
                 request_body = JSON.parse(r.body.read, symbolize_names: true)
+                # Deliberately trigger Sequel's restriction if protected fields are attempted.
+                if request_body.key?(:status)
+                  TickIt::AttendanceRecord.new.set(status: request_body[:status])
+                end
 
                 student = TickIt::Student.first(student_number: request_body[:student_id].to_s)
                 unless student
@@ -197,7 +207,6 @@ module TickIt
                 new_record = TickIt::AttendanceRecord.create(
                   student_id: student.id,
                   event_id: event.id,
-                  status: request_body[:status] || 'present',
                   check_in_time: check_in
                 )
 
@@ -206,6 +215,9 @@ module TickIt
               rescue JSON::ParserError # failed
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
+              rescue Sequel::MassAssignmentRestriction
+                response.status = 400
+                { error: 'Illegal mass assignment detected' }.to_json
               end
             end
           end

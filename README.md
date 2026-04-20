@@ -44,6 +44,16 @@ The server will be running at `http://localhost:9292`.
 
 ## Database Tasks
 
+### Database Folder Layout
+
+This project intentionally uses a split database layout:
+
+- `app/db/migrations/`: Sequel migration files (schema changes)
+- `app/db/seeds/`: YAML seed data files used by tests/examples
+- `db/local/`: runtime SQLite database files (e.g. `development.db`, `test.db`)
+
+This means `app/db` stores database code/data definitions, while `db/local` stores generated database files.
+
 View the status of your database:
 
 ```bash

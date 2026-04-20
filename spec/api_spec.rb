@@ -27,6 +27,7 @@ RSpec.describe 'TickIt API' do
 
     DATA.each_with_index do |row, i|
       db[:students].insert(
+        id: SecureRandom.uuid,
         name: "Test Student #{i}",
         email: "test#{i}@example.com",
         student_number: row['student_id']
@@ -34,6 +35,7 @@ RSpec.describe 'TickIt API' do
     end
 
     db[:events].insert(
+      id: SecureRandom.uuid,
       name: 'API Test Event',
       location: 'Room 101',
       start_time: Time.now,
@@ -81,7 +83,7 @@ RSpec.describe 'TickIt API' do
 
     describe 'POST /api/v1/attendances' do
       it 'creates a new attendance record successfully' do
-        payload = DATA[0].to_json
+        payload = DATA[0].reject { |k, _| k == 'status' }.to_json
 
         post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
 
@@ -95,7 +97,7 @@ RSpec.describe 'TickIt API' do
 
     describe 'GET /api/v1/attendances/{id}' do
       it 'retrieves a single attendance record by ID' do
-        payload = DATA[1].to_json
+        payload = DATA[1].reject { |k, _| k == 'status' }.to_json
         post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
 
         created_body = JSON.parse(last_response.body)
@@ -108,14 +110,14 @@ RSpec.describe 'TickIt API' do
         body = JSON.parse(last_response.body)
         expect(body['id']).to eq(record_id)
         expect(body['student_id']).to eq(DATA[1]['student_id'])
-        expect(body['status']).to eq(DATA[1]['status'])
+        expect(body['status']).to eq('present')
       end
     end
 
     describe 'GET /api/v1/attendances' do
       it 'retrieves all attendance record IDs' do
         DATA.each do |record_data|
-          payload = record_data.to_json
+          payload = record_data.reject { |k, _| k == 'status' }.to_json
           post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
         end
 
@@ -235,7 +237,7 @@ RSpec.describe 'TickIt API' do
         expect(body['event']['name']).to eq('Security Seminar')
         expect(body['event']['location']).to eq('Auditorium')
         expect(body['event']['description']).to eq('Hands-on lab')
-        expect(body['event']['id']).to be_a(Integer)
+        expect(body['event']['id']).to be_a(String)
 
         created = TickIt::Event.with_pk(body['event']['id'])
         expect(created).not_to be_nil
@@ -279,6 +281,22 @@ RSpec.describe 'TickIt API' do
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Student not found')
       end
+
+      it 'returns 400 and does not create rows on illegal mass assignment' do
+        before_count = TickIt::AttendanceRecord.count
+        payload = {
+          student_id: DATA[0]['student_id'],
+          event_id: TickIt::Event.first.id,
+          status: 'verified'
+        }.to_json
+
+        post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Illegal mass assignment detected')
+        expect(TickIt::AttendanceRecord.count).to eq(before_count)
+      end
     end
 
     describe 'GET /api/v1/attendances/{invalid_id}' do
@@ -287,6 +305,14 @@ RSpec.describe 'TickIt API' do
 
         expect(last_response.status).to eq(404)
 
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Attendance record not found')
+      end
+
+      it 'returns 404 when id contains SQL injection payload' do
+        get "/api/v1/attendances/1%20OR%201=1"
+
+        expect(last_response.status).to eq(404)
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Attendance record not found')
       end
@@ -367,6 +393,14 @@ RSpec.describe 'TickIt API' do
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Event not found')
       end
+
+      it 'returns 404 when id contains SQL injection payload' do
+        get "/api/v1/events/1%20OR%201=1"
+
+        expect(last_response.status).to eq(404)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Event not found')
+      end
     end
 
     describe 'POST /api/v1/events' do
@@ -391,6 +425,23 @@ RSpec.describe 'TickIt API' do
         expect(last_response.status).to eq(400)
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Invalid JSON format')
+      end
+    end
+
+    describe 'POST /api/v1/attendances SQL injection defense' do
+      it 'does not create data when student_id carries SQL injection payload' do
+        before_count = TickIt::AttendanceRecord.count
+        payload = {
+          student_id: "' OR '1'='1",
+          event_id: TickIt::Event.first.id
+        }.to_json
+
+        post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(404)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Student not found')
+        expect(TickIt::AttendanceRecord.count).to eq(before_count)
       end
     end
   end
