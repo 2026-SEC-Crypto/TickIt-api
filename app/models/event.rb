@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 require 'securerandom'
+require 'digest'
+require_relative '../../lib/secure_db'
+require_relative '../../lib/security_log'
+
 module TickIt
   # Scheduled activity or session that students can attend
   class Event < Sequel::Model(TickIt::Api::DB[:events])
@@ -10,10 +14,31 @@ module TickIt
     set_allowed_columns :name, :description, :location, :start_time, :end_time
 
     one_to_many :attendance_records, class: 'TickIt::AttendanceRecord'
+
     def before_create
       self.id ||= SecureRandom.uuid
       super
     end
+
+    # Encryption key from config
+    def self.cipher
+      @cipher ||= TickIt::SecureDB.new
+    end
+
+    # Writer method - encrypt location on assignment and store hash
+    def location=(value)
+      TickIt::SecurityLog.log_encryption('write', self.class.name, 'location')
+      self[:secure_location] = self.class.cipher.encrypt(value)
+      self[:location_hash] = Digest::SHA256.hexdigest(value.to_s)
+    end
+
+    # Reader method - decrypt location on access
+    def location
+      TickIt::SecurityLog.log_encryption('read', self.class.name, 'secure_location')
+      encrypted = self[:secure_location]
+      encrypted ? self.class.cipher.decrypt(encrypted) : nil
+    end
+
     def to_api_hash
       {
         id: id,
@@ -28,3 +53,4 @@ module TickIt
     end
   end
 end
+
