@@ -5,6 +5,7 @@ require 'json'
 require 'yaml'
 require 'open3'
 require 'tmpdir'
+require 'digest'
 require_relative '../app/controllers/app'
 require_relative 'spec_helper'
 
@@ -25,19 +26,25 @@ RSpec.describe 'TickIt API' do
     db = TickIt::Api::DB
     TABLES_CLEAR_ORDER.each { |table| db[table].delete }
 
+    # Use TickIt::SecureDB for encrypting sensitive data
+    cipher = TickIt::SecureDB.new
+
     DATA.each_with_index do |row, i|
       db[:students].insert(
         id: SecureRandom.uuid,
-        name: "Test Student #{i}",
-        email: "test#{i}@example.com",
-        student_number: row['student_id']
+        secure_name: cipher.encrypt("Test Student #{i}"),
+        secure_email: cipher.encrypt("test#{i}@example.com"),
+        email_hash: Digest::SHA256.hexdigest("test#{i}@example.com"),
+        secure_student_number: cipher.encrypt(row['student_id']),
+        student_number_hash: Digest::SHA256.hexdigest(row['student_id'])
       )
     end
 
     db[:events].insert(
       id: SecureRandom.uuid,
       name: 'API Test Event',
-      location: 'Room 101',
+      secure_location: cipher.encrypt('Room 101'),
+      location_hash: Digest::SHA256.hexdigest('Room 101'),
       start_time: Time.now,
       end_time: Time.now + 3600
     )
