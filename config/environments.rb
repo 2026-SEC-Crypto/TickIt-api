@@ -3,6 +3,8 @@
 require 'roda'
 require 'figaro'
 require 'sequel'
+require_relative '../lib/secure_db'
+require_relative '../lib/security_log'
 
 module TickIt
   # Configuration for the API

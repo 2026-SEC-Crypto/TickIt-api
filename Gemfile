@@ -3,9 +3,11 @@
 source 'https://rubygems.org'
 ruby '3.4.2'
 
+gem 'base64'
 gem 'bundler-audit'
 gem 'figaro'
 gem 'json'
+gem 'logger'
 gem 'puma'
 gem 'rackup'
 gem 'rake'

@@ -4,6 +4,8 @@ require 'roda'
 require 'json'
 
 require_relative '../../config/environments'
+require_relative '../../lib/secure_db'
+require_relative '../../lib/security_log'
 require_relative '../models/student'
 require_relative '../models/event'
 require_relative '../models/attendance_record'
@@ -25,12 +27,14 @@ module TickIt
 
     route do |r|
       response['Content-Type'] = 'application/json' # set default format
-      r.root do # alive
-        { message: 'TickIt API is up and running!' }.to_json
-      end
-      # /api/v1/...
-      r.on 'api' do
-        r.on 'v1' do
+      
+      begin
+        r.root do # alive
+          { message: 'TickIt API is up and running!' }.to_json
+        end
+        # /api/v1/...
+        r.on 'api' do
+          r.on 'v1' do
           r.on 'students' do
             r.is String do |id_segment|
               r.get do
@@ -79,12 +83,19 @@ module TickIt
               rescue JSON::ParserError
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
-              rescue Sequel::MassAssignmentRestriction
+              rescue Sequel::MassAssignmentRestriction => e
+                # Log mass assignment with keys but no values
+                TickIt::SecurityLog.log_mass_assignment_warning('Student', body.keys.map(&:to_s), TickIt::Student.allowed_columns)
                 response.status = 400
                 { error: 'Illegal mass assignment detected' }.to_json
               rescue Sequel::UniqueConstraintViolation
                 response.status = 400
                 { error: 'Duplicate email or student_number' }.to_json
+              rescue StandardError => e
+                # Log unknown errors
+                TickIt::SecurityLog.log_error(e, { model: 'Student', action: 'create' })
+                response.status = 500
+                { error: 'An unexpected error occurred' }.to_json
               end
             end
           end
@@ -143,12 +154,19 @@ module TickIt
               rescue JSON::ParserError
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
-              rescue Sequel::MassAssignmentRestriction
+              rescue Sequel::MassAssignmentRestriction => e
+                # Log mass assignment with keys but no values
+                TickIt::SecurityLog.log_mass_assignment_warning('Event', body.keys.map(&:to_s), TickIt::Event.allowed_columns)
                 response.status = 400
                 { error: 'Illegal mass assignment detected' }.to_json
               rescue ArgumentError
                 response.status = 400
                 { error: 'Invalid start_time or end_time' }.to_json
+              rescue StandardError => e
+                # Log unknown errors
+                TickIt::SecurityLog.log_error(e, { model: 'Event', action: 'create' })
+                response.status = 500
+                { error: 'An unexpected error occurred' }.to_json
               end
             end
           end
@@ -180,7 +198,7 @@ module TickIt
                   TickIt::AttendanceRecord.new.set(status: request_body[:status])
                 end
 
-                student = TickIt::Student.first(student_number: request_body[:student_id].to_s)
+                student = TickIt::Student.find_by_student_number(request_body[:student_id].to_s)
                 unless student
                   response.status = 404
                   next({ error: 'Student not found' }.to_json)
@@ -215,13 +233,26 @@ module TickIt
               rescue JSON::ParserError # failed
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
-              rescue Sequel::MassAssignmentRestriction
+              rescue Sequel::MassAssignmentRestriction => e
+                # Log mass assignment with keys but no values
+                TickIt::SecurityLog.log_mass_assignment_warning('AttendanceRecord', request_body.keys.map(&:to_s), TickIt::AttendanceRecord.allowed_columns)
                 response.status = 400
                 { error: 'Illegal mass assignment detected' }.to_json
+              rescue StandardError => e
+                # Log unknown errors
+                TickIt::SecurityLog.log_error(e, { model: 'AttendanceRecord', action: 'create' })
+                response.status = 500
+                { error: 'An unexpected error occurred' }.to_json
               end
             end
           end
         end
+        end
+      rescue StandardError => e
+        # Catch any unhandled errors in the API
+        TickIt::SecurityLog.log_error(e, { endpoint: 'unknown', method: request.request_method })
+        response.status = 500
+        { error: 'An unexpected error occurred' }.to_json
       end
     end
   end
