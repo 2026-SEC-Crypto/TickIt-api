@@ -2,7 +2,8 @@
 
 Sequel.migration do
   change do
-    # Rename location column to indicate it's encrypted
     rename_column :events, :location, :secure_location
+
+    add_column :events, :location_hash, String
   end
 end

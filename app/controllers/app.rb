@@ -6,7 +6,6 @@ require 'json'
 require_relative '../../config/environments'
 require_relative '../../lib/secure_db'
 require_relative '../../lib/security_log'
-require_relative '../models/student'
 require_relative '../models/event'
 require_relative '../models/attendance_record'
 
@@ -32,221 +31,147 @@ module TickIt
         r.root do # alive
           { message: 'TickIt API is up and running!' }.to_json
         end
+
         # /api/v1/...
         r.on 'api' do
           r.on 'v1' do
-          r.on 'students' do
-            r.is String do |id_segment|
-              r.get do
-                id_str = id_segment.sub(/\.json\z/, '')
-                student = TickIt::Student.with_pk(id_str)
-                if student
-                  { student: student.to_api_hash }.to_json
-                else
-                  response.status = 404
-                  { error: 'Student not found' }.to_json
-                end
-              end
-            end
-
-            r.is do
-              r.get do
-                students = TickIt::Student.order(:id).map(&:to_api_hash)
-                { students: students }.to_json
-              end
-
-              r.post do
-                body = JSON.parse(r.body.read, symbolize_names: true)
-                required = %i[name email student_number]
-                missing = required.select do |key|
-                  val = body[key]
-                  val.nil? || (val.is_a?(String) && val.strip.empty?)
-                end
-                if missing.any?
-                  response.status = 400
-                  next(
-                    {
-                      error: 'Missing required fields',
-                      missing: missing.map(&:to_s)
-                    }.to_json
-                  )
-                end
-
-                student = TickIt::Student.create(
-                  name: body[:name].to_s.strip,
-                  email: body[:email].to_s.strip,
-                  student_number: body[:student_number].to_s.strip
-                )
-
-                response.status = 201
-                { message: 'Student created', student: student.to_api_hash }.to_json
-              rescue JSON::ParserError
-                response.status = 400
-                { error: 'Invalid JSON format' }.to_json
-              rescue Sequel::MassAssignmentRestriction => e
-                # Log mass assignment with keys but no values
-                TickIt::SecurityLog.log_mass_assignment_warning('Student', body.keys.map(&:to_s), TickIt::Student.allowed_columns)
-                response.status = 400
-                { error: 'Illegal mass assignment detected' }.to_json
-              rescue Sequel::UniqueConstraintViolation
-                response.status = 400
-                { error: 'Duplicate email or student_number' }.to_json
-              rescue StandardError => e
-                # Log unknown errors
-                TickIt::SecurityLog.log_error(e, { model: 'Student', action: 'create' })
-                response.status = 500
-                { error: 'An unexpected error occurred' }.to_json
-              end
-            end
-          end
-
-          r.on 'events' do
-            r.is String do |id_segment|
-              r.get do
-                id_str = id_segment.sub(/\.json\z/, '')
-                #pk = Integer(id_str, exception: false)
-                #event = pk&.positive? && TickIt::Event.with_pk(pk)
-                event = TickIt::Event.with_pk(id_str)
-                if event
-                  { event: event.to_api_hash }.to_json
-                else
-                  response.status = 404
-                  { error: 'Event not found' }.to_json
-                end
-              end
-            end
-
-            r.is do
-              r.get do
-                events = TickIt::Event.order(:id).map(&:to_api_hash)
-                { events: events }.to_json
-              end
-
-              r.post do
-                body = JSON.parse(r.body.read, symbolize_names: true)
-                required = %i[name location start_time end_time]
-                missing = required.select do |key|
-                  val = body[key]
-                  val.nil? || (val.is_a?(String) && val.strip.empty?)
-                end
-                if missing.any?
-                  response.status = 400
-                  next(
-                    {
-                      error: 'Missing required fields',
-                      missing: missing.map(&:to_s)
-                    }.to_json
-                  )
-                end
-
-                start_t = TickIt::Api.parse_event_time(body[:start_time])
-                end_t = TickIt::Api.parse_event_time(body[:end_time])
-                event = TickIt::Event.create(
-                  name: body[:name].to_s.strip,
-                  location: body[:location].to_s.strip,
-                  start_time: start_t,
-                  end_time: end_t,
-                  description: body[:description]&.to_s
-                )
-
-                response.status = 201
-                { message: 'Event created', event: event.to_api_hash }.to_json
-              rescue JSON::ParserError
-                response.status = 400
-                { error: 'Invalid JSON format' }.to_json
-              rescue Sequel::MassAssignmentRestriction => e
-                # Log mass assignment with keys but no values
-                TickIt::SecurityLog.log_mass_assignment_warning('Event', body.keys.map(&:to_s), TickIt::Event.allowed_columns)
-                response.status = 400
-                { error: 'Illegal mass assignment detected' }.to_json
-              rescue ArgumentError
-                response.status = 400
-                { error: 'Invalid start_time or end_time' }.to_json
-              rescue StandardError => e
-                # Log unknown errors
-                TickIt::SecurityLog.log_error(e, { model: 'Event', action: 'create' })
-                response.status = 500
-                { error: 'An unexpected error occurred' }.to_json
-              end
-            end
-          end
-
-          r.on 'attendances' do
-            r.is String do |id_with_ext| # get by id
-              r.get do
-                id = id_with_ext.sub('.json', '')
-                record = TickIt::AttendanceRecord.with_pk_string(id)
-                if record
-                  record.api_json_hash.to_json
-                else
-                  response.status = 404 # not found
-                  { error: 'Attendance record not found' }.to_json
-                end
-              end
-            end
-
-            r.is do
-              r.get do # get all
-                ids = TickIt::AttendanceRecord.order(:id).select_map(:id)
-                { attendance_ids: ids }.to_json
-              end
-
-              r.post do # create new record
-                request_body = JSON.parse(r.body.read, symbolize_names: true)
-                # Deliberately trigger Sequel's restriction if protected fields are attempted.
-                if request_body.key?(:status)
-                  TickIt::AttendanceRecord.new.set(status: request_body[:status])
-                end
-
-                student = TickIt::Student.find_by_student_number(request_body[:student_id].to_s)
-                unless student
-                  response.status = 404
-                  next({ error: 'Student not found' }.to_json)
-                end
-
-                event =
-                  if request_body[:event_id]
-                    TickIt::Event.with_pk(Integer(request_body[:event_id], exception: false))
+            
+            # --- EVENTS ROUTES ---
+            r.on 'events' do
+              r.is String do |id_segment|
+                r.get do
+                  id_str = id_segment.sub(/\.json\z/, '')
+                  event = TickIt::Event.with_pk(id_str)
+                  if event
+                    { event: event.to_api_hash }.to_json
                   else
-                    TickIt::Event.order(:id).first
+                    response.status = 404
+                    { error: 'Event not found' }.to_json
                   end
-                unless event
-                  response.status = 400
-                  next({ error: 'No event available; create an event or pass event_id' }.to_json)
+                end
+              end
+
+              r.is do
+                r.get do
+                  events = TickIt::Event.order(:id).map(&:to_api_hash)
+                  { events: events }.to_json
                 end
 
-                check_in =
-                  if request_body[:timestamp]
-                    Time.at(request_body[:timestamp])
-                  else
-                    Time.now
+                r.post do
+                  body = JSON.parse(r.body.read, symbolize_names: true)
+                  required = %i[name location start_time end_time]
+                  missing = required.select do |key|
+                    val = body[key]
+                    val.nil? || (val.is_a?(String) && val.strip.empty?)
+                  end
+                  if missing.any?
+                    response.status = 400
+                    next({ error: 'Missing required fields', missing: missing.map(&:to_s) }.to_json)
                   end
 
-                new_record = TickIt::AttendanceRecord.create(
-                  student_id: student.id,
-                  event_id: event.id,
-                  check_in_time: check_in
-                )
+                  start_t = TickIt::Api.parse_event_time(body[:start_time])
+                  end_t = TickIt::Api.parse_event_time(body[:end_time])
+                  event = TickIt::Event.create(
+                    name: body[:name].to_s.strip,
+                    location: body[:location].to_s.strip,
+                    start_time: start_t,
+                    end_time: end_t,
+                    description: body[:description]&.to_s
+                  )
 
-                response.status = 201
-                { message: 'Attendance successfully recorded', id: new_record.id }.to_json
-              rescue JSON::ParserError # failed
-                response.status = 400
-                { error: 'Invalid JSON format' }.to_json
-              rescue Sequel::MassAssignmentRestriction => e
-                # Log mass assignment with keys but no values
-                TickIt::SecurityLog.log_mass_assignment_warning('AttendanceRecord', request_body.keys.map(&:to_s), TickIt::AttendanceRecord.allowed_columns)
-                response.status = 400
-                { error: 'Illegal mass assignment detected' }.to_json
-              rescue StandardError => e
-                # Log unknown errors
-                TickIt::SecurityLog.log_error(e, { model: 'AttendanceRecord', action: 'create' })
-                response.status = 500
-                { error: 'An unexpected error occurred' }.to_json
+                  response.status = 201
+                  { message: 'Event created', event: event.to_api_hash }.to_json
+                rescue JSON::ParserError
+                  response.status = 400
+                  { error: 'Invalid JSON format' }.to_json
+                rescue Sequel::MassAssignmentRestriction => e
+                  TickIt::SecurityLog.log_mass_assignment_warning('Event', body.keys.map(&:to_s), TickIt::Event.allowed_columns)
+                  response.status = 400
+                  { error: 'Illegal mass assignment detected' }.to_json
+                rescue ArgumentError
+                  response.status = 400
+                  { error: 'Invalid start_time or end_time' }.to_json
+                rescue StandardError => e
+                  TickIt::SecurityLog.log_error(e, { model: 'Event', action: 'create' })
+                  response.status = 500
+                  { error: 'An unexpected error occurred' }.to_json
+                end
               end
             end
+
+            # --- ATTENDANCES ROUTES ---
+            r.on 'attendances' do
+              r.is String do |id_with_ext| # get by id
+                r.get do
+                  id = id_with_ext.sub('.json', '')
+                  record = TickIt::AttendanceRecord.with_pk_string(id)
+                  if record
+                    record.api_json_hash.to_json
+                  else
+                    response.status = 404 # not found
+                    { error: 'Attendance record not found' }.to_json
+                  end
+                end
+              end
+
+              r.is do
+                r.get do # get all
+                  ids = TickIt::AttendanceRecord.order(:id).select_map(:id)
+                  { attendance_ids: ids }.to_json
+                end
+
+                r.post do # create new record
+                  request_body = JSON.parse(r.body.read, symbolize_names: true)
+                  
+                  if request_body.key?(:status)
+                    TickIt::AttendanceRecord.new.set(status: request_body[:status])
+                  end
+
+                  event =
+                    if request_body[:event_id]
+                      # 修正：直接用字串找，不要轉 Integer
+                      TickIt::Event.with_pk(request_body[:event_id].to_s)
+                    else
+                      TickIt::Event.order(:id).first
+                    end
+                    
+                  unless event
+                    response.status = 400
+                    next({ error: 'No event available; create an event or pass event_id' }.to_json)
+                  end
+
+                  check_in =
+                    if request_body[:timestamp]
+                      Time.at(request_body[:timestamp])
+                    else
+                      Time.now
+                    end
+
+                  # 修正：確保在 event 和 check_in 都定義好之後，才建立紀錄
+                  new_record = TickIt::AttendanceRecord.create(
+                    student_number: request_body[:student_id].to_s,
+                    event_id: event.id,
+                    check_in_time: check_in
+                  )
+
+                  response.status = 201
+                  { message: 'Attendance successfully recorded', id: new_record.id }.to_json
+                rescue JSON::ParserError # failed
+                  response.status = 400
+                  { error: 'Invalid JSON format' }.to_json
+                rescue Sequel::MassAssignmentRestriction => e
+                  TickIt::SecurityLog.log_mass_assignment_warning('AttendanceRecord', request_body.keys.map(&:to_s), TickIt::AttendanceRecord.allowed_columns)
+                  response.status = 400
+                  { error: 'Illegal mass assignment detected' }.to_json
+                rescue StandardError => e
+                  TickIt::SecurityLog.log_error(e, { model: 'AttendanceRecord', action: 'create' })
+                  response.status = 500
+                  { error: 'An unexpected error occurred' }.to_json
+                end
+              end
+            end
+
           end
-        end
         end
       rescue StandardError => e
         # Catch any unhandled errors in the API
