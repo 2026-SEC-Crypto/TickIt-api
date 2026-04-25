@@ -6,6 +6,10 @@ require_relative '../spec_helper'
 require_relative '../../app/models/account'
 
 RSpec.describe 'Account Model' do
+  before do
+    TickIt::Account.dataset.delete
+    TickIt::Event.dataset.delete
+  end
   describe 'Password Security' do
     it 'hashes the password and does not store plain text' do
       account = TickIt::Account.new
@@ -79,6 +83,27 @@ RSpec.describe 'Account Model' do
       # 4. test the associations (Event -> Account)：活動能找到它的協作者嗎？
       expect(event1.collaborators.count).to eq 1
       expect(event1.collaborators.first.email).to eq 'collab@example.com'
+    end
+  end
+  describe 'Roles and Privileges' do
+    it 'defaults to member role for new accounts' do
+      account = TickIt::Account.create(email: 'newbie@example.com', password: 'password')
+
+      expect(account.role).to eq 'member'
+      expect(account.member?).to be true
+      expect(account.admin?).to be false
+    end
+
+    it 'can be assigned an admin role' do
+      admin = TickIt::Account.create(
+        email: 'boss@example.com',
+        password: 'password',
+        role: 'admin'
+      )
+
+      expect(admin.role).to eq 'admin'
+      expect(admin.admin?).to be true
+      expect(admin.member?).to be false
     end
   end
 end

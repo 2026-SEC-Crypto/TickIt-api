@@ -60,5 +60,24 @@ module TickIt
     def email
       SecureDB.decrypt(secure_email)
     end
+
+    # ---------------------------------------------------------
+    # 3. Roles & Permissions
+    # ---------------------------------------------------------
+
+    # Checks if the account has administrative privileges
+    def admin?
+      role == 'admin'
+    end
+
+    # Checks if the account is a regular member
+    def member?
+      role == 'member'
+    end
+
+    # (Optional) Checks if the user is an organizer (just as an example for "other roles")
+    def organizer?
+      role == 'organizer'
+    end
   end
 end
