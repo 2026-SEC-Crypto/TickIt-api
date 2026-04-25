@@ -51,6 +51,43 @@ RSpec.describe 'TickIt API' do
   end
 
   describe 'HAPPY Path Tests' do
+    describe 'Account API' do
+      it 'POST /api/v1/accounts - creates a new account securely' do
+        payload = {
+          email: 'new_user@example.com',
+          password: 'super_secure_password_123'
+        }.to_json
+
+        post '/api/v1/accounts', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(201)
+        body = JSON.parse(last_response.body)
+
+        expect(body['message']).to eq('Account created successfully')
+        expect(body['account']['id']).not_to be_nil
+        expect(body['account']['email']).to eq('new_user@example.com')
+        expect(body['account']['password']).to be_nil
+        expect(body['account']['password_hash']).to be_nil
+      end
+
+      it 'GET /api/v1/accounts/:id - retrieves account info without leaking secrets' do
+        account = TickIt::Account.create(
+          email: 'search_me@example.com',
+          password: 'test_password'
+        )
+
+        get "/api/v1/accounts/#{account.id}"
+
+        expect(last_response.status).to eq(200)
+        body = JSON.parse(last_response.body)
+
+        expect(body['account']['id']).to eq(account.id)
+        expect(body['account']['email']).to eq('search_me@example.com')
+        expect(body['account']['password']).to be_nil
+        expect(body['account']['password_hash']).to be_nil
+      end
+    end
+
     describe 'DATABASE_URL configuration' do
       it 'HAPPY: boot fails safely when DATABASE_URL is not in environment (guard works)' do
         Dir.mktmpdir do |dir|

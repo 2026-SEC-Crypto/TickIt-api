@@ -8,6 +8,7 @@ require_relative '../../lib/secure_db'
 require_relative '../../lib/security_log'
 require_relative '../models/event'
 require_relative '../models/attendance_record'
+require_relative '../models/account'
 
 module TickIt
   # The main TickIt API class that handles attendance record endpoints
@@ -129,7 +130,7 @@ module TickIt
 
                   event =
                     if request_body[:event_id]
-                      # 修正：直接用字串找，不要轉 Integer
+                      
                       TickIt::Event.with_pk(request_body[:event_id].to_s)
                     else
                       TickIt::Event.order(:id).first
@@ -147,7 +148,7 @@ module TickIt
                       Time.now
                     end
 
-                  # 修正：確保在 event 和 check_in 都定義好之後，才建立紀錄
+                  
                   new_record = TickIt::AttendanceRecord.create(
                     student_number: request_body[:student_id].to_s,
                     event_id: event.id,
@@ -170,6 +171,55 @@ module TickIt
                 end
               end
             end
+
+          r.on 'accounts' do
+            # GET /api/v1/accounts/:id
+            
+            r.get String do |account_id|
+              account = TickIt::Account.first(id: account_id)
+              
+              if account.nil?
+                response.status = 404
+                r.halt({ error: 'Account not found' }.to_json)
+              end
+
+              
+              response.status = 200
+              {
+                account: {
+                  id: account.id,
+                  email: account.email
+                }
+              }.to_json
+            end
+
+            # POST /api/v1/accounts
+            # 註冊一個新帳號
+            r.post do
+              begin
+                account_data = JSON.parse(r.body.read)
+                
+                # 建立帳號，觸發我們寫好的加密機制
+                account = TickIt::Account.create(
+                  email: account_data['email'],
+                  password: account_data['password']
+                )
+
+                response.status = 201
+                { 
+                  message: 'Account created successfully', 
+                  account: { id: account.id, email: account.email } 
+                }.to_json
+                
+              rescue JSON::ParserError
+                response.status = 400
+                { error: 'Invalid JSON format' }.to_json
+              rescue Sequel::UniqueConstraintViolation
+                response.status = 400
+                { error: 'Email already exists' }.to_json
+              end
+            end
+          end
 
           end
         end

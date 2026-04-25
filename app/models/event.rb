@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'securerandom'
 require 'digest'
 require_relative '../../lib/secure_db'
@@ -9,7 +10,19 @@ module TickIt
   class Event < Sequel::Model(TickIt::Api::DB[:events])
     plugin :timestamps, update_on_create: true
     plugin :whitelist_security
-    #plugin :uuid
+    plugin :association_dependencies
+    # plugin :uuid
+    #
+    # Many-to-Many relationship with Account
+    # An event can have multiple collaborators (accounts)
+    many_to_many :collaborators,
+                 class: :'TickIt::Account',
+                 join_table: :accounts_events,
+                 left_key: :event_id,
+                 right_key: :account_id
+
+    # If an event is deleted, just remove the links in the join table, do not destroy the user accounts!
+    add_association_dependencies collaborators: :nullify
     # Keep writable columns explicit to prevent mass assignment abuse.
     set_allowed_columns :name, :description, :location, :start_time, :end_time
 
@@ -53,4 +66,3 @@ module TickIt
     end
   end
 end
-
