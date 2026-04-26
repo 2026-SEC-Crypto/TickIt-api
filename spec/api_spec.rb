@@ -71,6 +71,58 @@ RSpec.describe 'TickIt API' do
         expect(body['account']['password']).to be_nil
         expect(body['account']['password_hash']).to be_nil
       end
+
+      it 'GET /api/v1/accounts/:id - returns 404 for missing account' do
+        get '/api/v1/accounts/nonexistent-account-id'
+
+        expect(last_response.status).to eq(404)
+        body = JSON.parse(last_response.body)
+        expect(body['error']).to eq('Account not found')
+      end
+    end
+
+    describe 'Student courses/events API' do
+      it 'GET /api/v1/students/:student_id/events - returns attended events for a student' do
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU_COURSE_001',
+          event_id: @test_event.id
+        )
+
+        second_event = TickIt::EventService.create_event(
+          name: 'API Course 2',
+          location: 'Room 303',
+          start_time: Time.now + 7200,
+          end_time: Time.now + 10_800
+        )
+
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU_COURSE_001',
+          event_id: second_event.id
+        )
+
+        get '/api/v1/students/STU_COURSE_001/events'
+
+        expect(last_response.status).to eq(200)
+        body = JSON.parse(last_response.body)
+        expect(body['student_id']).to eq('STU_COURSE_001')
+        expect(body['events']).to be_an(Array)
+        expect(body['events'].length).to eq(2)
+      end
+
+      it 'GET /api/v1/students/:student_id/courses - alias route returns courses' do
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU_COURSE_002',
+          event_id: @test_event.id
+        )
+
+        get '/api/v1/students/STU_COURSE_002/courses'
+
+        expect(last_response.status).to eq(200)
+        body = JSON.parse(last_response.body)
+        expect(body['student_id']).to eq('STU_COURSE_002')
+        expect(body['courses']).to be_an(Array)
+        expect(body['courses'].first['id']).to eq(@test_event.id)
+      end
     end
 
     describe 'DATABASE_URL configuration' do
