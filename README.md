@@ -26,11 +26,8 @@ Edit `config/secrets.yml` with your database configuration if needed.
 3. Set up databases:
 
 ```bash
-# Create and migrate development database
-RACK_ENV=development bundle exec rake db:migrate
-
-# Create and migrate test database
-RACK_ENV=test bundle exec rake db:migrate
+bundle exec rake db:migrate
+bundle exec rake db:seed
 
 ```
 
@@ -53,6 +50,29 @@ This project intentionally uses a split database layout:
 - `db/local/`: runtime SQLite database files (e.g. `development.db`, `test.db`)
 
 This means `app/db` stores database code/data definitions, while `db/local` stores generated database files.
+
+### Seeding with sequel-seed
+
+This project uses the `sequel-seed` gem for database seeding.
+
+- Put seed scripts in the top-level `seeds/` folder using date-prefixed names, for example:
+  - `seeds/20260427_create_all.rb`
+- Define seed logic in a `run` method inside a `Sequel.seed(:development)` (or multi-env) block.
+- Run seeds with:
+
+```bash
+bundle exec rake db:seed
+```
+
+### Team setup (quick start)
+
+For collaborators, setup is:
+
+```bash
+bundle install
+rake db:migrate
+rake db:seed
+```
 
 View the status of your database:
 
