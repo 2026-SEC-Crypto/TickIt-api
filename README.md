@@ -46,10 +46,10 @@ The server will be running at `http://localhost:9292`.
 This project intentionally uses a split database layout:
 
 - `app/db/migrations/`: Sequel migration files (schema changes)
-- `app/db/seeds/`: YAML seed data files used by tests/examples
+- `seeds/`: `sequel-seed` seed scripts using dated filenames such as `20260427_create_all.rb`
 - `db/local/`: runtime SQLite database files (e.g. `development.db`, `test.db`)
 
-This means `app/db` stores database code/data definitions, while `db/local` stores generated database files.
+This means `app/db` stores database code/data definitions, `seeds/` stores runnable seed scripts, and `db/local` stores generated database files.
 
 ### Seeding with sequel-seed
 
@@ -57,7 +57,7 @@ This project uses the `sequel-seed` gem for database seeding.
 
 - Put seed scripts in the top-level `seeds/` folder using date-prefixed names, for example:
   - `seeds/20260427_create_all.rb`
-- Define seed logic in a `run` method inside a `Sequel.seed(:development)` (or multi-env) block.
+- Define seed logic in a `run` method inside a `Sequel.seed(:development, :test)` (or multi-env) block.
 - Run seeds with:
 
 ```bash
@@ -70,6 +70,14 @@ For collaborators, setup is:
 
 ```bash
 bundle install
+rake db:migrate
+rake db:seed
+```
+
+If a clean local reset is needed first, run:
+
+```bash
+rake db:drop
 rake db:migrate
 rake db:seed
 ```
@@ -93,8 +101,8 @@ bundle exec rake spec
 ```
 
 This will execute all tests including:
-- **HAPPY Path Tests:** Verify successful API operations (root route, create, get single, get list)
-- **SAD Path Tests:** Verify proper error handling (non-existent resources, invalid JSON)
+- **HAPPY Path Tests:** Verify successful API operations for events, attendances, accounts, and student event/course lookups
+- **SAD Path Tests:** Verify proper error handling for non-existent resources, invalid JSON, and mass-assignment attempts
 
 To run API specs only:
 
@@ -159,95 +167,18 @@ All endpoints return JSON responses with appropriate HTTP status codes.
 
 ### 2. Students
 
-#### 2.1 Get All Students
-**Endpoint:** `GET /api/v1/students`
+The API does not expose full student CRUD at the moment. Instead, it exposes student-attendance derived views.
+
+#### 2.1 Get Events for a Student
+**Endpoint:** `GET /api/v1/students/:student_id/events`
 
 **Response:** `200 OK`
 ```json
 {
-  "students": [
-    {
-      "id": 1,
-      "name": "Alice Johnson",
-      "email": "alice@example.com",
-      "student_number": "STU001",
-      "created_at": "2026-04-12T10:30:00Z",
-      "updated_at": "2026-04-12T10:30:00Z"
-    }
-  ]
-}
-```
-
-#### 2.2 Get Student by ID
-**Endpoint:** `GET /api/v1/students/:id`
-
-**Response:** `200 OK`
-```json
-{
-  "student": {
-    "id": 1,
-    "name": "Alice Johnson",
-    "email": "alice@example.com",
-    "student_number": "STU001",
-    "created_at": "2026-04-12T10:30:00Z",
-    "updated_at": "2026-04-12T10:30:00Z"
-  }
-}
-```
-
-**Error:** `404 Not Found`
-```json
-{
-  "error": "Student not found"
-}
-```
-
-#### 2.3 Create a Student
-**Endpoint:** `POST /api/v1/students`
-
-**Request Body:**
-```json
-{
-  "name": "Sarah Lim",
-  "email": "sarah@example.com",
-  "student_number": "B12121212"
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "message": "Student created",
-  "student": {
-      "id": 233,
-      "name": "Sarah Lim",
-      "email": "sarah@example.com",
-      "student_number": "B12121212",
-      "created_at": "2026-04-12T22:01:35+08:00",
-      "updated_at": "2026-04-12T22:01:35+08:00"
-  }
-}
-```
-
-**Error:** `400 Bad Request`
-```json
-{
-  "error": "Missing required fields",
-  "missing": ["email"]
-}
-```
-
-### 3. Events
-
-#### 3.1 Get All Events
-**Endpoint:** `GET /api/v1/events`
-
-**Response:** `200 OK`
-```json
-{
+  "student_id": "STU001",
   "events": [
     {
-      "id": 1,
+      "id": "event-uuid",
       "name": "Web Development Workshop",
       "location": "Room 101",
       "start_time": "2026-04-12T14:00:00Z",
@@ -260,21 +191,100 @@ All endpoints return JSON responses with appropriate HTTP status codes.
 }
 ```
 
-#### 3.2 Get Event by ID
+#### 2.2 Get Courses for a Student
+**Endpoint:** `GET /api/v1/students/:student_id/courses`
+
+**Response:** `200 OK`
+```json
+{
+  "student_id": "STU001",
+  "courses": [
+    {
+      "id": "event-uuid",
+      "name": "Database Design Course",
+      "location": "Room 303",
+      "start_time": "2026-04-12T14:00:00Z",
+      "end_time": "2026-04-12T15:00:00Z",
+      "description": "Relational Database Concepts",
+      "created_at": "2026-04-12T10:30:00Z",
+      "updated_at": "2026-04-12T10:30:00Z"
+    }
+  ]
+}
+```
+
+### 3. Accounts
+
+#### 3.1 Create an Account
+**Endpoint:** `POST /api/v1/accounts`
+
+**Request Body:**
+```json
+{
+  "email": "new_user@example.com",
+  "password": "super_secure_password_123",
+  "role": "member"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "message": "Account created successfully",
+  "account": {
+    "id": "account-uuid",
+    "email": "new_user@example.com",
+    "role": "member"
+  }
+}
+```
+
+#### 3.2 Get an Account by ID
+**Endpoint:** `GET /api/v1/accounts/:id`
+
+**Response:** `200 OK`
+```json
+{
+  "account": {
+    "id": "account-uuid",
+    "email": "search_me@example.com",
+    "role": "member"
+  }
+}
+```
+
+**Error:** `404 Not Found`
+```json
+{
+  "error": "Account not found"
+}
+```
+
+### 4. Events
+
+#### 4.1 Get All Events
+**Endpoint:** `GET /api/v1/events`
+
+**Response:** `200 OK`
+```json
+{
+  "events": []
+}
+```
+
+#### 4.2 Get Event by ID
 **Endpoint:** `GET /api/v1/events/:id`
 
 **Response:** `200 OK`
 ```json
 {
   "event": {
-    "id": 1,
+    "id": "event-uuid",
     "name": "Web Development Workshop",
     "location": "Room 101",
     "start_time": "2026-04-12T14:00:00Z",
     "end_time": "2026-04-12T15:00:00Z",
-    "description": "Introduction to Web Dev",
-    "created_at": "2026-04-12T10:30:00Z",
-    "updated_at": "2026-04-12T10:30:00Z"
+    "description": "Introduction to Web Dev"
   }
 }
 ```
@@ -286,7 +296,7 @@ All endpoints return JSON responses with appropriate HTTP status codes.
 }
 ```
 
-#### 3.3 Create an Event
+#### 4.3 Create an Event
 **Endpoint:** `POST /api/v1/events`
 
 **Request Body:**
@@ -305,14 +315,12 @@ All endpoints return JSON responses with appropriate HTTP status codes.
 {
   "message": "Event created",
   "event": {
-    "id": 2,
+    "id": "event-uuid",
     "name": "Security Seminar",
     "location": "Room 202",
     "start_time": "2026-04-12T16:00:00Z",
     "end_time": "2026-04-12T17:00:00Z",
-    "description": "Application Security Basics",
-    "created_at": "2026-04-12T10:31:00Z",
-    "updated_at": "2026-04-12T10:31:00Z"
+    "description": "Application Security Basics"
   }
 }
 ```
@@ -320,38 +328,36 @@ All endpoints return JSON responses with appropriate HTTP status codes.
 **Error:** `400 Bad Request`
 ```json
 {
-  "error": "Invalid start_time or end_time"
+  "error": "Missing required fields",
+  "missing": ["start_time", "end_time"]
 }
 ```
 
-### 4. Attendance Records
+### 5. Attendance Records
 
-#### 4.1 Get All Attendance Record IDs
+#### 5.1 Get All Attendance Record IDs
 **Endpoint:** `GET /api/v1/attendances`
 
 **Response:** `200 OK`
 ```json
 {
-    "attendance_ids": [
-        19,
-        20,
-        21,
-        22
-    ]
+  "attendance_ids": [
+    "attendance-uuid"
+  ]
 }
 ```
 
-#### 4.2 Get Attendance Record by ID
+#### 5.2 Get Attendance Record by ID
 **Endpoint:** `GET /api/v1/attendances/:id`
 
 **Response:** `200 OK`
 ```json
 {
-    "id": 20,
-    "student_id": "B10902000",
-    "status": "present",
-    "check_in_time": "2026-04-12T22:08:14+08:00",
-    "event_id": 83
+  "id": "attendance-uuid",
+  "student_id": "B10902000",
+  "status": "present",
+  "check_in_time": "2026-04-12T22:08:14+08:00",
+  "event_id": "event-uuid"
 }
 ```
 
@@ -362,44 +368,46 @@ All endpoints return JSON responses with appropriate HTTP status codes.
 }
 ```
 
-#### 4.3 Create an Attendance Record (Check-in)
+#### 5.3 Create an Attendance Record
 **Endpoint:** `POST /api/v1/attendances`
 
-**Request Body (Minimal):**
+**Request Body:**
 ```json
 {
-  "student_id": "B10902000"
+  "student_id": "STU001",
+  "event_id": "event-uuid"
 }
 ```
 
-**Request Body (Full):**
-```json
-{
-  "student_id": "B10902000",
-  "event_id": 83,
-  "status": "present",
-  "timestamp": 1712973900
-}
-```
 **Response:** `201 Created`
 ```json
 {
   "message": "Attendance successfully recorded",
-  "id": "3ab1443b5e902b66"
-}
-```
-
-**Error:** `404 Not Found`
-```json
-{
-  "error": "Student not found"
+  "id": "attendance-uuid"
 }
 ```
 
 **Error:** `400 Bad Request`
 ```json
 {
+  "error": "Illegal mass assignment detected"
+}
+```
+
+**Error:** `400 Bad Request`
+```json
+{
+  "error": "Invalid JSON format"
+}
+```
+
+**Error:** `404 Not Found`
+```json
+{
   "error": "No event available; create an event or pass event_id"
 }
 ```
+
+
+
 
