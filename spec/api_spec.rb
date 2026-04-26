@@ -13,7 +13,7 @@ require_relative 'spec_helper'
 DATA = YAML.safe_load_file('app/db/seeds/attendance_records.yml')['attendance_records']
 
 # Foreign keys reference students/events — delete dependents first
-TABLES_CLEAR_ORDER = %i[attendance_records events].freeze
+TABLES_CLEAR_ORDER = %i[attendance_records events accounts].freeze
 
 RSpec.describe 'TickIt API' do
   include Rack::Test::Methods
@@ -26,25 +26,10 @@ RSpec.describe 'TickIt API' do
     db = TickIt::Api::DB
     TABLES_CLEAR_ORDER.each { |table| db[table].delete }
 
-    # Use TickIt::SecureDB for encrypting sensitive data
-    cipher = TickIt::SecureDB.new
-
-    DATA.each_with_index do |row, i|
-      # db[:students].insert(
-      #   id: SecureRandom.uuid,
-      #   secure_name: cipher.encrypt("Test Student #{i}"),
-      #   secure_email: cipher.encrypt("test#{i}@example.com"),
-      #   email_hash: Digest::SHA256.hexdigest("test#{i}@example.com"),
-      #   secure_student_number: cipher.encrypt(row['student_id']),
-      #   student_number_hash: Digest::SHA256.hexdigest(row['student_id'])
-      # )
-    end
-
-    db[:events].insert(
-      id: SecureRandom.uuid,
+    # Create a test event using EventService
+    @test_event = TickIt::EventService.create_event(
       name: 'API Test Event',
-      secure_location: cipher.encrypt('Room 101'),
-      location_hash: Digest::SHA256.hexdigest('Room 101'),
+      location: 'Room 101',
       start_time: Time.now,
       end_time: Time.now + 3600
     )
@@ -71,7 +56,7 @@ RSpec.describe 'TickIt API' do
       end
 
       it 'GET /api/v1/accounts/:id - retrieves account info without leaking secrets' do
-        account = TickIt::Account.create(
+        account = TickIt::AccountService.create_account(
           email: 'search_me@example.com',
           password: 'test_password'
         )
@@ -225,7 +210,7 @@ RSpec.describe 'TickIt API' do
 
     describe 'GET /api/v1/events' do
       it 'returns a JSON list of all events' do
-        TickIt::Event.create(
+        TickIt::EventService.create_event(
           name: 'Second Event',
           location: 'Room 202',
           start_time: Time.utc(2026, 5, 1, 10, 0, 0),

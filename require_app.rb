@@ -19,7 +19,14 @@ def require_app(load_models = nil) # rubocop:disable Metrics/MethodLength
   require_relative 'config/environments'
 
   # Load models if requested
-  return unless load_models == 'models'
+  if load_models == 'models'
+    Dir.glob('app/models/*.rb').sort.each { |file| require_relative file }
+  end
 
-  Dir.glob('app/models/*.rb').sort.each { |file| require_relative file }
+  # Load services if requested
+  if load_models == 'services'
+    Dir.glob('app/models/*.rb').sort.each { |file| require_relative file }
+    Dir.glob('app/services/*.rb').sort.each { |file| require_relative file }
+  end
 end
+
