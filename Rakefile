@@ -3,6 +3,8 @@
 require 'rspec/core/rake_task'
 require './require_app'
 require 'fileutils'
+require 'sequel'
+require 'sequel/extensions/seed'
 
 task default: :spec
 
@@ -57,6 +59,7 @@ namespace :db do
   desc 'Load model files'
   task :load_models do
     require_app('models')
+    require_app('services')
   end
 
   desc 'Run migrations'
@@ -82,36 +85,9 @@ namespace :db do
   task seed: %i[migrate load_models] do
     puts "Seeding #{@app.environment} database..."
 
-    # Create sample data
-    students = @app.DB[:students]
-    events = @app.DB[:events]
-    attendance_records = @app.DB[:attendance_records]
-
-    # Sample students
-    students.insert(name: 'Alice Johnson', email: 'alice@example.com', student_number: 'STU001')
-    students.insert(name: 'Bob Smith', email: 'bob@example.com', student_number: 'STU002')
-    students.insert(name: 'Carol White', email: 'carol@example.com', student_number: 'STU003')
-
-    # Sample events
-    events.insert(
-      name: 'Web Development Workshop',
-      location: 'Room 101',
-      start_time: Time.now,
-      end_time: Time.now + 3600,
-      description: 'Introduction to Web Dev'
-    )
-    events.insert(
-      name: 'Security Seminar',
-      location: 'Room 202',
-      start_time: Time.now,
-      end_time: Time.now + 5400,
-      description: 'Application Security Basics'
-    )
-
-    # Sample attendance records
-    attendance_records.insert(student_id: 1, event_id: 1, status: 'present', check_in_time: Time.now)
-    attendance_records.insert(student_id: 2, event_id: 1, status: 'present', check_in_time: Time.now)
-    attendance_records.insert(student_id: 1, event_id: 2, status: 'absent')
+    Sequel.extension :seed
+    Sequel::Seed.setup(@app.environment)
+    Sequel::Seeder.apply(@app.DB, 'seeds')
 
     puts '✓ Database seeded'
   end
@@ -119,9 +95,10 @@ namespace :db do
   desc 'Delete all data in database; maintain tables'
   task delete: :load_models do
     puts "Deleting all data from #{@app.environment} database..."
+    @app.DB[:accounts_events].delete
     @app.DB[:attendance_records].delete
     @app.DB[:events].delete
-    @app.DB[:students].delete
+    @app.DB[:accounts].delete
     puts '✓ All data deleted'
   end
 

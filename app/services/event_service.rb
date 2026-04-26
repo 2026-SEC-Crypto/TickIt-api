@@ -11,6 +11,7 @@ module TickIt
       case value
       when Integer, Float then Time.at(value)
       when String then Time.iso8601(value)
+      when Time then value
       else
         raise ArgumentError, 'Unsupported time format'
       end
