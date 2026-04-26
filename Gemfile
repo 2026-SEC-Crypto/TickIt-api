@@ -15,6 +15,7 @@ gem 'rake'
 gem 'rbnacl'
 gem 'roda'
 gem 'sequel'
+gem 'sequel-seed'
 gem 'sqlite3'
 
 group :development, :test do
