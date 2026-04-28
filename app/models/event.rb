@@ -11,8 +11,10 @@ module TickIt
     plugin :timestamps, update_on_create: true
     plugin :whitelist_security
     plugin :association_dependencies
-    # plugin :uuid
-    #
+
+    set_allowed_columns :name, :location, :start_time, :end_time, :description
+
+    self.strict_param_setting = true
     # Many-to-Many relationship with Account
     # An event can have multiple collaborators (accounts)
     many_to_many :collaborators,

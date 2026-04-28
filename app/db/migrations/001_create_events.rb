@@ -3,7 +3,6 @@
 Sequel.migration do
   change do
     create_table :events do
-      #primary_key :id
       String :id, type: :uuid, primary_key: true
       String :name, null: false
       String :location, null: false

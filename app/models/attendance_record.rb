@@ -6,10 +6,8 @@ module TickIt
   class AttendanceRecord < Sequel::Model(TickIt::Api::DB[:attendance_records])
     plugin :timestamps, update_on_create: true
     plugin :whitelist_security
-    # plugin :uuid
     set_allowed_columns :student_number, :event_id, :check_in_time
 
-    # many_to_one :student, class: 'TickIt::Student'
     many_to_one :event, class: 'TickIt::Event'
     def before_create
       self.id ||= SecureRandom.uuid

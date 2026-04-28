@@ -47,6 +47,8 @@ module TickIt
 
                 r.post do
                   body = JSON.parse(r.body.read, symbolize_names: true)
+                  
+                  # 1. Check for missing required fields 🌟
                   required = %i[name location start_time end_time]
                   missing = required.select do |field|
                     value = body[field]
@@ -58,6 +60,22 @@ module TickIt
                     return({ error: 'Missing required fields', missing: missing.map(&:to_s) }.to_json)
                   end
 
+                  # 2. Check for illegal mass assignment keys 🚨
+                  allowed_keys = %i[name location start_time end_time description]
+                  illegal_keys = body.keys - allowed_keys
+
+                  if illegal_keys.any?
+                    # Security log for mass assignment attempt
+                    TickIt::SecurityLog.log_mass_assignment_warning(
+                      'Event',
+                      body.keys.map(&:to_s),
+                      allowed_keys.map(&:to_s)
+                    )
+                    response.status = 400
+                    return({ error: 'Illegal mass assignment detected' }.to_json)
+                  end
+
+                  # 3. Process the valid request to create an event
                   event = TickIt::EventService.create_event(
                     name: body[:name],
                     location: body[:location],
@@ -68,16 +86,13 @@ module TickIt
 
                   response.status = 201
                   { message: 'Event created', event: event.to_api_hash }.to_json
+                  
                 rescue JSON::ParserError
                   response.status = 400
                   { error: 'Invalid JSON format' }.to_json
                 rescue ArgumentError => e
                   response.status = 400
                   { error: e.message }.to_json
-                rescue Sequel::MassAssignmentRestriction
-                  TickIt::SecurityLog.log_mass_assignment_warning('Event', body.keys.map(&:to_s), TickIt::Event.allowed_columns)
-                  response.status = 400
-                  { error: 'Illegal mass assignment detected' }.to_json
                 end
               end
             end

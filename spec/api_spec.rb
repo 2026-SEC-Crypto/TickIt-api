@@ -213,53 +213,6 @@ RSpec.describe 'TickIt API' do
       end
     end
 
-    # describe 'GET /api/v1/students' do
-    #   it 'returns a JSON list of all students' do
-    #     get '/api/v1/students'
-
-    #     expect(last_response.status).to eq(200)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['students']).to be_an(Array)
-    #     expect(body['students'].length).to eq(DATA.length)
-    #     numbers = body['students'].map { |s| s['student_number'] }
-    #     expect(numbers).to include(DATA[0]['student_id'])
-    #   end
-    # end
-
-    # describe 'GET /api/v1/students/:id' do
-    #   it 'returns a single student when the id exists' do
-    #     student = TickIt::Student.first!
-
-    #     get "/api/v1/students/#{student.id}"
-
-    #     expect(last_response.status).to eq(200)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['student']).to be_a(Hash)
-    #     expect(body['student']['id']).to eq(student.id)
-    #     expect(body['student']['email']).to eq('test0@example.com')
-    #     expect(body['student']['student_number']).to eq(DATA[0]['student_id'])
-    #   end
-    # end
-
-    # describe 'POST /api/v1/students' do
-    #   it 'creates a student and returns 201 with the new resource' do
-    #     payload = {
-    #       name: 'New Student',
-    #       email: 'new.student@example.com',
-    #       student_number: 'B10909999'
-    #     }.to_json
-
-    #     post '/api/v1/students', payload, { 'CONTENT_TYPE' => 'application/json' }
-
-    #     expect(last_response.status).to eq(201)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['message']).to eq('Student created')
-    #     expect(body['student']['name']).to eq('New Student')
-    #     expect(body['student']['email']).to eq('new.student@example.com')
-    #     expect(body['student']['student_number']).to eq('B10909999')
-    #   end
-    # end
-
     describe 'GET /api/v1/events' do
       it 'returns a JSON list of all events' do
         TickIt::EventService.create_event(
@@ -346,6 +299,27 @@ RSpec.describe 'TickIt API' do
     end
 
     describe 'POST /api/v1/attendances' do
+      it 'returns 400 and does not create rows on illegal mass assignment' do
+        before_count = TickIt::Event.count
+
+        # Include an illegal attribute (e.g., trying to force a specific ID)
+        payload = {
+          name: 'Hacked Event',
+          location: 'Secret Base',
+          start_time: '2026-05-01T10:00:00Z',
+          end_time: '2026-05-01T12:00:00Z',
+          id: 'malicious_id_injection'
+        }.to_json
+
+        post '/api/v1/events', payload, { 'CONTENT_TYPE' => 'application/json' }
+
+        expect(last_response.status).to eq(400)
+        body = JSON.parse(last_response.body)
+
+        # Expect the same error message format you use for attendance records
+        expect(body['error']).to eq('Illegal mass assignment detected')
+        expect(TickIt::Event.count).to eq(before_count)
+      end
       it 'returns 400 when the body is not valid JSON' do
         post '/api/v1/attendances', 'not-json', { 'CONTENT_TYPE' => 'application/json' }
 
@@ -353,15 +327,6 @@ RSpec.describe 'TickIt API' do
         body = JSON.parse(last_response.body)
         expect(body['error']).to eq('Invalid JSON format')
       end
-
-      # it 'returns 404 when the student_number does not exist' do
-      #   payload = { student_id: 'NO_SUCH_STUDENT', location: { lat: 0, lng: 0 } }.to_json
-      #   post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
-
-      #   expect(last_response.status).to eq(404)
-      #   body = JSON.parse(last_response.body)
-      #   expect(body['error']).to eq('Student not found')
-      # end
 
       it 'returns 400 and does not create rows on illegal mass assignment' do
         before_count = TickIt::AttendanceRecord.count
@@ -398,62 +363,6 @@ RSpec.describe 'TickIt API' do
         expect(body['error']).to eq('Attendance record not found')
       end
     end
-
-    # describe 'GET /api/v1/students' do
-    #   it 'returns an empty list when no students exist' do
-    #     db = TickIt::Api::DB
-    #     db[:attendance_records].delete
-    #     db[:students].delete
-
-    #     get '/api/v1/students'
-
-    #     expect(last_response.status).to eq(200)
-    #     expect(JSON.parse(last_response.body)['students']).to eq([])
-    #   end
-    # end
-
-    # describe 'GET /api/v1/students/:id' do
-    #   it 'returns 404 when the student id does not exist' do
-    #     get '/api/v1/students/999999'
-
-    #     expect(last_response.status).to eq(404)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['error']).to eq('Student not found')
-    #   end
-    # end
-
-    # describe 'POST /api/v1/students' do
-    #   it 'returns 400 when required fields are missing' do
-    #     payload = { name: 'Only Name' }.to_json
-    #     post '/api/v1/students', payload, { 'CONTENT_TYPE' => 'application/json' }
-
-    #     expect(last_response.status).to eq(400)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['error']).to eq('Missing required fields')
-    #     expect(body['missing']).to include('email', 'student_number')
-    #   end
-
-    #   it 'returns 400 when JSON is invalid' do
-    #     post '/api/v1/students', '{', { 'CONTENT_TYPE' => 'application/json' }
-
-    #     expect(last_response.status).to eq(400)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['error']).to eq('Invalid JSON format')
-    #   end
-
-    #   it 'returns 400 when email or student_number is duplicated' do
-    #     payload = {
-    #       name: 'Duplicate',
-    #       email: 'test0@example.com',
-    #       student_number: 'UNIQUE001'
-    #     }.to_json
-    #     post '/api/v1/students', payload, { 'CONTENT_TYPE' => 'application/json' }
-
-    #     expect(last_response.status).to eq(400)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['error']).to eq('Duplicate email or student_number')
-    #   end
-    # end
 
     describe 'GET /api/v1/events' do
       it 'returns an empty list when no events exist' do
@@ -508,22 +417,5 @@ RSpec.describe 'TickIt API' do
         expect(body['error']).to eq('Invalid JSON format')
       end
     end
-
-    # describe 'POST /api/v1/attendances SQL injection defense' do
-    #   it 'does not create data when student_id carries SQL injection payload' do
-    #     before_count = TickIt::AttendanceRecord.count
-    #     payload = {
-    #       student_id: "' OR '1'='1",
-    #       event_id: TickIt::Event.first.id
-    #     }.to_json
-
-    #     post '/api/v1/attendances', payload, { 'CONTENT_TYPE' => 'application/json' }
-
-    #     expect(last_response.status).to eq(404)
-    #     body = JSON.parse(last_response.body)
-    #     expect(body['error']).to eq('Student not found')
-    #     expect(TickIt::AttendanceRecord.count).to eq(before_count)
-    #   end
-    # end
   end
 end
