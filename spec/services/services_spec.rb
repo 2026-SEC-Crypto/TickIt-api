@@ -6,6 +6,13 @@ require_relative '../../app/services/attendance_record_service'
 require_relative '../spec_helper'
 
 describe 'TickIt Services' do
+  before(:each) do
+    TickIt::Api::DB.run('PRAGMA foreign_keys = OFF')
+    TickIt::Api::DB[:attendance_records].delete
+    TickIt::Api::DB[:events].delete
+    TickIt::Api::DB[:accounts].delete
+    TickIt::Api::DB.run('PRAGMA foreign_keys = ON')
+  end
   describe TickIt::EventService do
     describe '.parse_time' do
       it 'parses Unix timestamps' do
@@ -203,7 +210,7 @@ describe 'TickIt Services' do
   end
 
   describe TickIt::AttendanceRecordService do
-    let(:test_event) do
+    let!(:test_event) do
       TickIt::EventService.create_event(
         name: 'Attendance Test Event',
         location: 'Test Room',
@@ -251,63 +258,64 @@ describe 'TickIt Services' do
         end.to raise_error(StandardError, /No event available/)
       end
     end
-  end
-  describe '.find_record' do
-    it 'finds an existing attendance record' do
-      created_record = TickIt::AttendanceRecordService.create_record(
-        student_id: 'STU004',
-        event_id: test_event.id
-      )
 
-      found_record = TickIt::AttendanceRecordService.find_record(created_record.id)
-      expect(found_record).to eq(created_record)
+    describe '.find_record' do
+      it 'finds an existing attendance record' do
+        created_record = TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU004',
+          event_id: test_event.id
+        )
+
+        found_record = TickIt::AttendanceRecordService.find_record(created_record.id)
+        expect(found_record).to eq(created_record)
+      end
+
+      it 'returns nil for non-existent record' do
+        result = TickIt::AttendanceRecordService.find_record('nonexistent-id')
+        expect(result).to be_nil
+      end
     end
 
-    it 'returns nil for non-existent record' do
-      result = TickIt::AttendanceRecordService.find_record('nonexistent-id')
-      expect(result).to be_nil
+    describe '.records_for_student' do
+      it 'retrieves all records for a student' do
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU005',
+          event_id: test_event.id
+        )
+
+        second_event = TickIt::EventService.create_event(
+          name: 'Second Event',
+          location: 'Room 2',
+          start_time: Time.now + 7200,
+          end_time: Time.now + 10_800
+        )
+
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU005',
+          event_id: second_event.id
+        )
+
+        records = TickIt::AttendanceRecordService.records_for_student('STU005')
+        expect(records.length).to eq(2)
+        expect(records.all? { |r| r[:student_id] == 'STU005' }).to be(true)
+      end
     end
-  end
 
-  describe '.records_for_student' do
-    it 'retrieves all records for a student' do
-      TickIt::AttendanceRecordService.create_record(
-        student_id: 'STU005',
-        event_id: test_event.id
-      )
+    describe '.records_for_event' do
+      it 'retrieves all records for an event' do
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU006',
+          event_id: test_event.id
+        )
+        TickIt::AttendanceRecordService.create_record(
+          student_id: 'STU007',
+          event_id: test_event.id
+        )
 
-      second_event = TickIt::EventService.create_event(
-        name: 'Second Event',
-        location: 'Room 2',
-        start_time: Time.now + 7200,
-        end_time: Time.now + 10_800
-      )
-
-      TickIt::AttendanceRecordService.create_record(
-        student_id: 'STU005',
-        event_id: second_event.id
-      )
-
-      records = TickIt::AttendanceRecordService.records_for_student('STU005')
-      expect(records.length).to eq(2)
-      expect(records.all? { |r| r[:student_id] == 'STU005' }).to be(true)
-    end
-  end
-
-  describe '.records_for_event' do
-    it 'retrieves all records for an event' do
-      TickIt::AttendanceRecordService.create_record(
-        student_id: 'STU006',
-        event_id: test_event.id
-      )
-      TickIt::AttendanceRecordService.create_record(
-        student_id: 'STU007',
-        event_id: test_event.id
-      )
-
-      records = TickIt::AttendanceRecordService.records_for_event(test_event.id)
-      expect(records.length).to eq(2)
-      expect(records.all? { |r| r[:event_id] == test_event.id }).to be(true)
+        records = TickIt::AttendanceRecordService.records_for_event(test_event.id)
+        expect(records.length).to eq(2)
+        expect(records.all? { |r| r[:event_id] == test_event.id }).to be(true)
+      end
     end
   end
 end

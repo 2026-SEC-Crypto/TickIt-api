@@ -22,14 +22,12 @@ module TickIt
     def self.create_account(email:, password:, role: 'member')
       validate_account_params(email:, password:)
 
-      account = Account.create(
+      Account.create(
         email:,
         password:,
         role:
       )
-
-      account
-    rescue Sequel::UniqueConstraintViolation
+    rescue Sequel::UniqueConstraintViolation, SQLite3::ConstraintException
       raise "Account with email '#{email}' already exists"
     end
 
@@ -98,8 +96,11 @@ module TickIt
     private
 
     def self.validate_account_params(email:, password:)
-      raise 'Email cannot be empty' if email.nil? || (email.is_a?(String) && email.strip.empty?)
-      raise 'Password cannot be empty' if password.nil? || (password.is_a?(String) && password.strip.empty?)
+      raise ArgumentError, 'Email cannot be empty' if email.nil? || (email.is_a?(String) && email.strip.empty?)
+      if password.nil? || (password.is_a?(String) && password.strip.empty?)
+        raise ArgumentError,
+              'Password cannot be empty'
+      end
       raise 'Invalid email format' unless valid_email?(email)
     end
 

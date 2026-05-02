@@ -41,13 +41,11 @@ module TickIt
                    Time.now
                  end
 
-      record = AttendanceRecord.create(
+      AttendanceRecord.create(
         student_number: student_id.to_s,
         event_id: event.id,
         check_in_time: check_in
       )
-
-      record
     rescue ArgumentError => e
       raise ArgumentError, "Invalid timestamp format: #{e.message}"
     rescue Sequel::MassAssignmentRestriction => e
@@ -99,7 +97,10 @@ module TickIt
     private
 
     def self.validate_student_id(student_id)
-      raise 'Student ID cannot be empty' if student_id.nil? || (student_id.is_a?(String) && student_id.strip.empty?)
+      return unless student_id.nil? || (student_id.is_a?(String) && student_id.strip.empty?)
+
+      raise ArgumentError,
+            'Student ID cannot be empty'
     end
 
     def self.parse_timestamp(value)
