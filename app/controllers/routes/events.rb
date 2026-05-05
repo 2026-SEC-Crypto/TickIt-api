@@ -22,6 +22,9 @@ module TickIt
         end
 
         r.post do
+          # Only organizers and admins can create events (403 if unauthorized)
+          require_authorization!('create_event', 'Event')
+
           body = JSON.parse(r.body.read, symbolize_names: true)
 
           required = %i[name location start_time end_time]

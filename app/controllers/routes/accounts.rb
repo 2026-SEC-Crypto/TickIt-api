@@ -22,6 +22,9 @@ module TickIt
       end
 
       r.post do
+        # Only admins can create accounts (403 if unauthorized)
+        require_authorization!('create_account', 'Account')
+
         account_data = JSON.parse(r.body.read)
 
         account = TickIt::AccountService.create_account(

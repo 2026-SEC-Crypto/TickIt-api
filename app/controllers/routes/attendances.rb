@@ -21,6 +21,9 @@ module TickIt
         end
 
         r.post do
+          # Only members and organizers can record attendance (403 if unauthorized)
+          require_authorization!('record_attendance', 'AttendanceRecord')
+
           body = JSON.parse(r.body.read, symbolize_names: true)
           allowed_keys = %i[student_id event_id timestamp location]
           attempted_keys = body.keys

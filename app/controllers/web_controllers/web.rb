@@ -6,6 +6,7 @@ require 'json'
 require_relative '../../models/account'
 require_relative '../../services/account_service'
 require_relative '../../services/session_service'
+require_relative '../../services/authorization_service'
 require_relative '../../../config/environments'
 require_relative '../../../lib/security_log'
 
@@ -45,12 +46,45 @@ module TickIt
       view(view_name, layout: 'layouts/layout')
     end
 
+    # Authorization helper methods
+    # Check if current user is authorized for an action
+    def authorized?(action)
+      return false if @current_user.nil?
+      AuthorizationService.authorized?(@current_user, action)
+    end
+
+    # Check if current user can act on another account
+    def can_act_on_account?(target_account, action)
+      return false if @current_user.nil?
+      AuthorizationService.can_act_on_account?(@current_user, target_account, action)
+    end
+
+    # Check if current user is admin
+    def admin?
+      @current_user&.admin? || false
+    end
+
+    # Check if current user is organizer or admin
+    def organizer_or_admin?
+      return false if @current_user.nil?
+      @current_user.organizer? || @current_user.admin?
+    end
+
+    # Make authorization helpers available to views
+    def make_authorization_available
+      @is_admin = admin?
+      @is_organizer_or_admin = organizer_or_admin?
+      @user_role = @current_user&.role || 'guest'
+    end
+
     route do |r|
       # Set current user for all requests (for layout navigation)
       # Retrieves account from session if logged in, otherwise nil
       @current_user = SessionService.current_user(session)
       # Make flash messages available to all views
       @flash = flash
+      # Make authorization variables available to all views for conditional rendering
+      make_authorization_available
 
       # Redirect to home if accessing root
       r.root do

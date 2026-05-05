@@ -11,11 +11,15 @@ require_relative '../models/account'
 require_relative '../services/event_service'
 require_relative '../services/account_service'
 require_relative '../services/attendance_record_service'
+require_relative '../services/session_service'
+require_relative '../services/authorization_service'
 
 module TickIt
   class Api < Roda
     plugin :halt
     plugin :multi_route
+    plugin :sessions, key: '_tickit_api_session', secret: ENV.fetch('SESSION_KEY', 'development-key')
+    plugin :symbolize_keys
 
     # 自動載入 routes 目錄下的所有路由檔案
     Dir.glob(File.expand_path('routes/*.rb', __dir__)).each do |file|
@@ -54,6 +58,50 @@ module TickIt
         response.status = 500
         { error: 'Internal server error' }.to_json
       end
+    end
+
+    # Authorization helper methods for API routes
+    def current_user
+      return nil if session[:user_id].nil?
+      TickIt::SessionService.current_user(session[:user_id])
+    end
+
+    def authorized?(action)
+      user = current_user
+      return false if user.nil?
+      TickIt::AuthorizationService.authorized?(user, action)
+    end
+
+    def can_act_on_account?(target_account, action)
+      user = current_user
+      return false if user.nil?
+      TickIt::AuthorizationService.can_act_on_account?(user, target_account, action)
+    end
+
+    def can_act_on_event?(event, action)
+      user = current_user
+      return false if user.nil?
+      TickIt::AuthorizationService.can_act_on_event?(user, event, action)
+    end
+
+    def require_authorization!(action, resource = nil)
+      unless authorized?(action)
+        user = current_user
+        TickIt::AuthorizationService.log_unauthorized_attempt(user, action, resource)
+        halt 403, { error: 'Forbidden: insufficient permissions', action: action }.to_json
+      end
+    end
+
+    def admin?
+      user = current_user
+      return false if user.nil?
+      user.admin?
+    end
+
+    def organizer_or_admin?
+      user = current_user
+      return false if user.nil?
+      user.organizer? || user.admin?
     end
   end
 end
