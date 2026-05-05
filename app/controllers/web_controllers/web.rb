@@ -10,6 +10,17 @@ require_relative '../../../config/environments'
 require_relative '../../../lib/security_log'
 
 module TickIt
+  # Web controller for handling user-facing pages and authentication
+  # Uses Roda framework with Slim templating engine and secure HTTP-only cookie sessions
+  #
+  # HTTP Status Codes Used:
+  # - 200 OK: Successful request (forms displayed, account page shown)
+  # - 400 Bad Request: Validation errors (missing fields, mismatched passwords, invalid input)
+  # - 401 Unauthorized: Authentication failure (incorrect email/password)
+  # - 403 Forbidden: Access denied (user not logged in or session invalid)
+  # - 404 Not Found: Page not found
+  # - 409 Conflict: Resource conflict (email already exists during registration)
+  #
   class Web < Roda
     plugin :render, engine: 'slim', views: 'app/views'
     # Configure sessions with:
@@ -56,12 +67,13 @@ module TickIt
         # Login - POST
         # Authenticates user with email and password using AccountService
         # On success: Creates session with user data and redirects to account page
-        # On failure: Redisplays form with error message
+        # On failure: Redisplays form with error message and appropriate status code
         r.post do
           email = r.params['email']
           password = r.params['password']
 
           if email.nil? || email.empty? || password.nil? || password.empty?
+            response.status = 400 # Bad Request - missing required fields
             @error = 'Email and password are required'
             return render_with_layout 'sessions/login'
           end
@@ -79,6 +91,7 @@ module TickIt
             SessionService.log_user_action(account.id, 'login')
             r.redirect '/account'
           else
+            response.status = 401 # Unauthorized - invalid credentials
             @error = 'Invalid email or password'
             @email = email
             render_with_layout 'sessions/login'
@@ -107,16 +120,19 @@ module TickIt
 
           # Validation
           if email.nil? || email.empty?
+            response.status = 400 # Bad Request - missing required field
             @error = 'Email is required'
             return render_with_layout 'sessions/register'
           end
 
           if password.nil? || password.empty?
+            response.status = 400 # Bad Request - missing required field
             @error = 'Password is required'
             return render_with_layout 'sessions/register'
           end
 
           if password != password_confirm
+            response.status = 400 # Bad Request - validation error
             @error = 'Passwords do not match'
             @email = email
             return render_with_layout 'sessions/register'
@@ -134,6 +150,8 @@ module TickIt
             SessionService.log_user_action(account.id, 'register')
             r.redirect '/account'
           rescue StandardError => e
+            # Return 409 Conflict if email already exists, 400 for other validation errors
+            response.status = e.message.include?('already exists') ? 409 : 400
             @error = e.message
             @email = email
             render_with_layout 'sessions/register'
@@ -147,6 +165,7 @@ module TickIt
       r.on 'account' do
         r.get do
           unless session && session[:account_id]
+            response.status = 403 # Forbidden - not authenticated
             r.redirect '/login'
           end
 
@@ -157,6 +176,7 @@ module TickIt
             session.delete(:account_id)
             session.delete(:email)
             session.delete(:role)
+            response.status = 403 # Forbidden - session invalid
             r.redirect '/login'
           end
 
