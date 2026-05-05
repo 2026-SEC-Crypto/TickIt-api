@@ -34,7 +34,8 @@ module TickIt
     # - secret: Encryption key for session data (set from env or default to dev key)
     # - HTTP-only cookies: Prevents JavaScript access to session cookies (XSS protection)
     # - Secure flag: Only in production (forces HTTPS transmission)
-    plugin :sessions, secret: ENV['SESSION_SECRET'] || 'development_secret_key_change_in_production'
+    plugin :sessions,
+           secret: ENV['SESSION_SECRET'] || 'dev-tickit-secure-key-minimum-64-characters-required-for-production-use-now'
     # Flash plugin for temporary messages across redirects
     # Stores messages in encrypted session and automatically clears after one request
     plugin :flash
@@ -50,12 +51,14 @@ module TickIt
     # Check if current user is authorized for an action
     def authorized?(action)
       return false if @current_user.nil?
+
       AuthorizationService.authorized?(@current_user, action)
     end
 
     # Check if current user can act on another account
     def can_act_on_account?(target_account, action)
       return false if @current_user.nil?
+
       AuthorizationService.can_act_on_account?(@current_user, target_account, action)
     end
 
@@ -67,6 +70,7 @@ module TickIt
     # Check if current user is organizer or admin
     def organizer_or_admin?
       return false if @current_user.nil?
+
       @current_user.organizer? || @current_user.admin?
     end
 
@@ -134,7 +138,11 @@ module TickIt
             SessionService.log_user_action(account.id, 'login')
             # Set flash notice for successful login
             flash['notice'] = "Welcome back, #{account.email}!"
-            r.redirect '/account'
+            # Reload current user within same request so account page can use it
+            @current_user = account
+            make_authorization_available
+            # Render account page directly (session will persist through cookie on response)
+            render_with_layout 'accounts/overview'
           else
             response.status = 401 # Unauthorized - invalid credentials
             flash['error'] = 'Invalid email or password'
@@ -193,7 +201,11 @@ module TickIt
             SessionService.log_user_action(account.id, 'register')
             # Set flash notice for successful registration
             flash['notice'] = 'Account created successfully! Welcome to TickIt.'
-            r.redirect '/account'
+            # Reload current user within same request so account page can use it
+            @current_user = account
+            make_authorization_available
+            # Render account page directly (session will persist through cookie on response)
+            render_with_layout 'accounts/overview'
           rescue StandardError => e
             # Return 409 Conflict if email already exists, 400 for other validation errors
             response.status = e.message.include?('already exists') ? 409 : 400

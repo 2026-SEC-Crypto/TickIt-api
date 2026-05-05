@@ -56,5 +56,12 @@ module TickIt
 
       @@logger.send(level_method, "SECURITY EVENT - Type: #{event_type}, Message: #{message}")
     end
+
+    # Log user authentication actions (login, logout, register)
+    # Called from SessionService to track user authentication events
+    def self.log(user_id:, action:, timestamp: Time.now)
+      msg = "USER ACTION - User ID: #{user_id}, Action: #{action}, Timestamp: #{timestamp}"
+      @@logger.info(msg)
+    end
   end
 end

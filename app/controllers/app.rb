@@ -18,8 +18,7 @@ module TickIt
   class Api < Roda
     plugin :halt
     plugin :multi_route
-    plugin :sessions, key: '_tickit_api_session', secret: ENV.fetch('SESSION_KEY', 'development-key')
-    plugin :symbolize_keys
+    plugin :sessions, key: '_tickit_api_session', secret: ENV.fetch('SESSION_KEY', 'dev-tickit-secure-key-minimum-64-characters-required-for-production-use-now')
 
     # 自動載入 routes 目錄下的所有路由檔案
     Dir.glob(File.expand_path('routes/*.rb', __dir__)).each do |file|
