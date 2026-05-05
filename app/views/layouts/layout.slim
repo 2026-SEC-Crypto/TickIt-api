@@ -68,6 +68,11 @@ html
           padding: 0 2rem;
         }
 
+        .flash-container {
+          margin-top: 1.5rem;
+          margin-bottom: 2rem;
+        }
+
   body
     nav
       .nav-container
@@ -83,4 +88,6 @@ html
             a href="/register" Register
 
     .container
+      .flash-container
+        == render('shared/flash_messages')
       == yield
