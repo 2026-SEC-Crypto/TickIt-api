@@ -1,0 +1,103 @@
+h1 Account Overview
+
+- if @current_user
+  .account-info
+    .info-card
+      h2 Account Details
+      
+      .info-item
+        span.label Email:
+        span.value = @current_user.email
+      
+      .info-item
+        span.label Role:
+        span.value = @current_user.role.capitalize
+      
+      .info-item
+        span.label Account ID:
+        span.value = @current_user.id
+
+    .account-actions
+      h2 Actions
+      
+      ul
+        li
+          a href="/home" Back to Home
+        li
+          a href="/logout" Logout
+
+  style
+    :css
+      .account-info {
+        max-width: 600px;
+        margin: 2rem auto;
+      }
+
+      .info-card {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid #eee;
+      }
+
+      .info-item:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .value {
+        color: #555;
+        word-break: break-all;
+      }
+
+      .account-actions {
+        margin-top: 2rem;
+      }
+
+      .account-actions h2 {
+        margin-bottom: 1rem;
+      }
+
+      .account-actions ul {
+        list-style: none;
+        display: flex;
+        gap: 1rem;
+      }
+
+      .account-actions a {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: #3498db;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+      }
+
+      .account-actions a:hover {
+        background-color: #2980b9;
+      }
+
+      .account-actions a[href="/logout"] {
+        background-color: #e74c3c;
+      }
+
+      .account-actions a[href="/logout"]:hover {
+        background-color: #c0392b;
+      }
+
+- else
+  p
+    | You must be logged in to view this page. 
+    a href="/login" Login here
