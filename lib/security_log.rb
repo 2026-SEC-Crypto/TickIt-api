@@ -9,11 +9,7 @@ module TickIt
     @@logger.level = Logger::DEBUG
 
     def self.setup_logger(log_file = nil)
-      if log_file
-        @@logger = Logger.new(log_file)
-      else
-        @@logger = Logger.new($stderr)
-      end
+      @@logger = Logger.new(log_file || $stderr)
       @@logger.level = Logger::DEBUG
       @@logger.formatter = proc do |severity, datetime, progname, msg|
         "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity.ljust(5)} - #{msg}\n"
