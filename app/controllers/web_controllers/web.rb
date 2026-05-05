@@ -13,6 +13,12 @@ module TickIt
   # Web controller for handling user-facing pages and authentication
   # Uses Roda framework with Slim templating engine and secure HTTP-only cookie sessions
   #
+  # Plugins Used:
+  # - :render - Slim template engine rendering
+  # - :sessions - Encrypted HTTP-only cookie session storage
+  # - :flash - One-time temporary messages across redirects
+  # - :halt - Error handling and response control
+  #
   # HTTP Status Codes Used:
   # - 200 OK: Successful request (forms displayed, account page shown)
   # - 400 Bad Request: Validation errors (missing fields, mismatched passwords, invalid input)
@@ -28,6 +34,9 @@ module TickIt
     # - HTTP-only cookies: Prevents JavaScript access to session cookies (XSS protection)
     # - Secure flag: Only in production (forces HTTPS transmission)
     plugin :sessions, secret: ENV['SESSION_SECRET'] || 'development_secret_key_change_in_production'
+    # Flash plugin for temporary messages across redirects
+    # Stores messages in encrypted session and automatically clears after one request
+    plugin :flash
     plugin :halt
 
     # Helper to render views with layout
@@ -40,6 +49,8 @@ module TickIt
       # Set current user for all requests (for layout navigation)
       # Retrieves account from session if logged in, otherwise nil
       @current_user = SessionService.current_user(session)
+      # Make flash messages available to all views
+      @flash = flash
 
       # Redirect to home if accessing root
       r.root do
@@ -48,8 +59,6 @@ module TickIt
 
       # Home page
       r.get 'home' do
-        # Check if user just logged out
-        @logout_success = r.params['logout'] == 'success'
         render_with_layout 'homes/home'
       end
 
@@ -67,14 +76,14 @@ module TickIt
         # Login - POST
         # Authenticates user with email and password using AccountService
         # On success: Creates session with user data and redirects to account page
-        # On failure: Redisplays form with error message and appropriate status code
+        # On failure: Sets flash error and redisplays form with appropriate status code
         r.post do
           email = r.params['email']
           password = r.params['password']
 
           if email.nil? || email.empty? || password.nil? || password.empty?
             response.status = 400 # Bad Request - missing required fields
-            @error = 'Email and password are required'
+            flash['error'] = 'Email and password are required'
             return render_with_layout 'sessions/login'
           end
 
@@ -89,12 +98,13 @@ module TickIt
             session[:role] = account.role
             # Log successful login to security log
             SessionService.log_user_action(account.id, 'login')
+            # Set flash notice for successful login
+            flash['notice'] = "Welcome back, #{account.email}!"
             r.redirect '/account'
           else
             response.status = 401 # Unauthorized - invalid credentials
-            @error = 'Invalid email or password'
-            @email = email
-            render_with_layout 'sessions/login'
+            flash['error'] = 'Invalid email or password'
+            return render_with_layout 'sessions/login'
           end
         end
       end
@@ -121,20 +131,19 @@ module TickIt
           # Validation
           if email.nil? || email.empty?
             response.status = 400 # Bad Request - missing required field
-            @error = 'Email is required'
+            flash['error'] = 'Email is required'
             return render_with_layout 'sessions/register'
           end
 
           if password.nil? || password.empty?
             response.status = 400 # Bad Request - missing required field
-            @error = 'Password is required'
+            flash['error'] = 'Password is required'
             return render_with_layout 'sessions/register'
           end
 
           if password != password_confirm
             response.status = 400 # Bad Request - validation error
-            @error = 'Passwords do not match'
-            @email = email
+            flash['error'] = 'Passwords do not match'
             return render_with_layout 'sessions/register'
           end
 
@@ -148,13 +157,14 @@ module TickIt
             session[:email] = account.email
             session[:role] = account.role
             SessionService.log_user_action(account.id, 'register')
+            # Set flash notice for successful registration
+            flash['notice'] = 'Account created successfully! Welcome to TickIt.'
             r.redirect '/account'
           rescue StandardError => e
             # Return 409 Conflict if email already exists, 400 for other validation errors
             response.status = e.message.include?('already exists') ? 409 : 400
-            @error = e.message
-            @email = email
-            render_with_layout 'sessions/register'
+            flash['error'] = e.message
+            return render_with_layout 'sessions/register'
           end
         end
       end
@@ -166,6 +176,7 @@ module TickIt
         r.get do
           unless session && session[:account_id]
             response.status = 403 # Forbidden - not authenticated
+            flash['error'] = 'You must be logged in to access your account'
             r.redirect '/login'
           end
 
@@ -177,6 +188,7 @@ module TickIt
             session.delete(:email)
             session.delete(:role)
             response.status = 403 # Forbidden - session invalid
+            flash['error'] = 'Your session has expired. Please log in again.'
             r.redirect '/login'
           end
 
@@ -200,8 +212,12 @@ module TickIt
         session.delete(:email)
         session.delete(:role)
 
-        # Redirect to home with logout confirmation
-        r.redirect '/home?logout=success'
+        # Set flash message for display on next page
+        # Flash messages are automatically cleared after one request
+        flash['notice'] = 'You have been successfully logged out. See you soon!'
+
+        # Redirect to home with flash message
+        r.redirect '/home'
       end
 
       # 404
