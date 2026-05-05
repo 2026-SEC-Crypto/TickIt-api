@@ -1,5 +1,9 @@
 h1 Welcome to TickIt
 
+- if @logout_success
+  .alert-success
+    p You have been successfully logged out. See you soon!
+
 - if @current_user
   p
     | Hello, 
@@ -40,6 +44,19 @@ h1 Welcome to TickIt
 
   style
     :css
+      .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 2rem;
+        border: 1px solid #c3e6cb;
+      }
+
+      .alert-success p {
+        margin: 0;
+      }
+
       .content {
         margin-top: 2rem;
       }

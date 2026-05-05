@@ -37,6 +37,8 @@ module TickIt
 
       # Home page
       r.get 'home' do
+        # Check if user just logged out
+        @logout_success = r.params['logout'] == 'success'
         render_with_layout 'homes/home'
       end
 
@@ -163,17 +165,23 @@ module TickIt
       end
 
       # Logout
-      # Clears session data and redirects to home page
+      # Clears all session data and redirects to home page
+      # Session data is stored in encrypted HTTP-only cookie by Roda
+      # Deleting session keys effectively clears the cookie
       r.on 'logout' do
         if session[:account_id]
+          # Log the logout action for security audit
           SessionService.log_user_action(session[:account_id], 'logout')
         end
 
-        # Clear all session data
+        # Delete all account information from session cookie
+        # This removes the encrypted data from the HTTP-only cookie
         session.delete(:account_id)
         session.delete(:email)
         session.delete(:role)
-        r.redirect '/home'
+
+        # Redirect to home with logout confirmation
+        r.redirect '/home?logout=success'
       end
 
       # 404
