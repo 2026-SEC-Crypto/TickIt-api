@@ -11,7 +11,11 @@ RSpec.describe 'TickIt API - App Config & Root' do
   include Rack::Test::Methods
 
   def app
-    TickIt::Api
+    require 'rack'
+    Rack::URLMap.new(
+      '/'    => TickIt::Api.freeze.app,
+      '/api' => TickIt::Api.freeze.app
+    )
   end
 
   describe 'HAPPY Path Tests' do

@@ -10,26 +10,26 @@ module TickIt
     # Define permission levels for different actions
     PERMISSIONS = {
       # User account actions
-      view_own_account: ['member', 'admin', 'organizer'],
-      update_own_account: ['member', 'admin', 'organizer'],
-      delete_own_account: ['member', 'admin', 'organizer'],
+      view_own_account: %w[member admin organizer],
+      update_own_account: %w[member admin organizer],
+      delete_own_account: %w[member admin organizer],
       view_all_accounts: ['admin'],
       update_any_account: ['admin'],
       delete_any_account: ['admin'],
 
       # Event actions
-      view_events: ['member', 'admin', 'organizer'],
-      create_event: ['admin', 'organizer'],
-      update_own_event: ['admin', 'organizer'],
+      view_events: %w[member admin organizer],
+      create_event: %w[admin organizer],
+      update_own_event: %w[admin organizer],
       update_any_event: ['admin'],
-      delete_own_event: ['admin', 'organizer'],
+      delete_own_event: %w[admin organizer],
       delete_any_event: ['admin'],
 
       # Attendance actions
-      view_own_attendance: ['member', 'admin', 'organizer'],
-      view_all_attendance: ['admin', 'organizer'],
-      record_attendance: ['admin', 'organizer'],
-      edit_attendance: ['admin', 'organizer'],
+      view_own_attendance: %w[member admin organizer],
+      view_all_attendance: %w[admin organizer],
+      record_attendance: %w[admin organizer],
+      edit_attendance: %w[admin organizer],
       delete_attendance: ['admin']
     }.freeze
 
@@ -77,11 +77,13 @@ module TickIt
       when :edit, :update
         # Only admin or event organizer can edit
         return true if account.admin?
+
         # Check if account is the creator/organizer
         event.account_id == account.id
       when :delete
         # Only admin or event organizer can delete
         return true if account.admin?
+
         # Check if account is the creator/organizer
         event.account_id == account.id
       else
@@ -94,12 +96,10 @@ module TickIt
     # @param action [Symbol] The unauthorized action
     # @param resource [String] Description of the resource being accessed
     def self.log_unauthorized_attempt(account, action, resource)
-      SecurityLog.log(
-        user_id: account&.id,
-        action: "unauthorized_#{action}",
-        resource:,
-        timestamp: Time.now,
-        severity: 'warning'
+      SecurityLog.log_security_event(
+        "unauthorized_#{action}",
+        "User #{account&.id || 'Unknown'} attempted unauthorized action on #{resource}",
+        :warn
       )
     end
 
@@ -122,7 +122,7 @@ module TickIt
     # Get all available roles
     # @return [Array<String>] List of available roles
     def self.available_roles
-      ['member', 'organizer', 'admin']
+      %w[member organizer admin]
     end
   end
 end

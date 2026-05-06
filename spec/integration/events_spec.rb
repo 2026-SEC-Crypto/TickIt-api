@@ -11,7 +11,11 @@ RSpec.describe 'TickIt API - Events' do
   include Rack::Test::Methods
 
   def app
-    TickIt::Api
+    require 'rack'
+    Rack::URLMap.new(
+      '/'    => TickIt::Api.freeze.app,
+      '/api' => TickIt::Api.freeze.app
+    )
   end
 
   before(:each) do
