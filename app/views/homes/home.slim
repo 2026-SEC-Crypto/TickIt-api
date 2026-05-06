@@ -1,10 +1,12 @@
 h1 Welcome to TickIt
 
 - if @current_user
-  p
-    | Hello, 
-    strong = @current_user.email
-    | !
+  .user-greeting
+    p
+      | Hello, 
+      strong = @current_user.email
+      | ! You are logged in.
+  
   .content
     h2 What is TickIt?
     p TickIt is a secure event attendance tracking system!
@@ -17,13 +19,13 @@ h1 Welcome to TickIt
         li Encrypted data storage
         li Role-based access control
 
-    .next-steps
-      h3 Get Started:
+    .actions
+      h3 Quick Actions:
       ul
         li
-          a href="/account" View your account
+          a href="/account" View your account details
         li
-          a href="/logout" Logout
+          a href="/events" View events
 
 - else
   p The secure attendance tracking system for educational events.

@@ -29,18 +29,19 @@ module TickIt
   # - 409 Conflict: Resource conflict (email already exists during registration)
   #
   class Web < Roda
-        plugin :render, engine: 'slim', views: 'app/views'
-        # Configure sessions with:
-        # - secret: Encryption key for session data (set from env or default to dev key)
-        # - HTTP-only cookies: Prevents JavaScript access to session cookies (XSS protection)
-        # - Secure flag: Only in production (forces HTTPS transmission)
-            plugin :sessions,
-              key: '_tickit_api_session',
-              secret: ENV.fetch('SESSION_KEY', 'dev-tickit-secure-key-minimum-64-characters-required-for-production-use-now')
-        # Flash plugin for temporary messages across redirects
-        # Stores messages in encrypted session and automatically clears after one request
-        plugin :flash
-        plugin :halt
+    plugin :render, engine: 'slim', views: 'app/views'
+    # Configure sessions with:
+    # - secret: Encryption key for session data (set from env or default to dev key)
+    # - HTTP-only cookies: Prevents JavaScript access to session cookies (XSS protection)
+    # - Secure flag: Only in production (forces HTTPS transmission)
+    plugin :sessions,
+           key: '_tickit_api_session',
+           secret: ENV.fetch('SESSION_KEY',
+                             'dev-tickit-secure-key-minimum-64-characters-required-for-production-use-now')
+    # Flash plugin for temporary messages across redirects
+    # Stores messages in encrypted session and automatically clears after one request
+    plugin :flash
+    plugin :halt
 
     # Helper to render views with layout
     # All views are rendered with the layout/layout.slim template which includes navigation
