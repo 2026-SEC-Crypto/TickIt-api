@@ -138,6 +138,7 @@ module TickIt
             SessionService.log_user_action(account.id, 'login')
             # Set flash notice for successful login
             flash['notice'] = "Welcome back, #{account.email}!"
+            flash['error'] = nil # Clear any previous error
             # Reload current user within same request so account page can use it
             @current_user = account
             make_authorization_available
@@ -201,6 +202,7 @@ module TickIt
             SessionService.log_user_action(account.id, 'register')
             # Set flash notice for successful registration
             flash['notice'] = 'Account created successfully! Welcome to TickIt.'
+            flash['error'] = nil # Clear any previous error
             # Reload current user within same request so account page can use it
             @current_user = account
             make_authorization_available
