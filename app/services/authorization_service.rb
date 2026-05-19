@@ -14,6 +14,7 @@ module TickIt
       update_own_account: %w[member admin organizer],
       delete_own_account: %w[member admin organizer],
       view_all_accounts: ['admin'],
+      create_account: ['admin'],
       update_any_account: ['admin'],
       delete_any_account: ['admin'],
 
@@ -40,7 +41,7 @@ module TickIt
     def self.authorized?(account, action)
       return false if account.nil?
 
-      allowed_roles = PERMISSIONS[action]
+      allowed_roles = PERMISSIONS[action.to_sym]
       return false unless allowed_roles
 
       allowed_roles.include?(account.role)

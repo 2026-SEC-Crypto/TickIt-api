@@ -30,7 +30,9 @@ RSpec.describe 'TickIt API - App Config & Root' do
           boot = File.expand_path('../support/boot_without_database_url.rb', __dir__)
           env = {
             'RACK_ENV' => 'test',
-            'BUNDLE_GEMFILE' => File.join(project_root, 'Gemfile')
+            'BUNDLE_GEMFILE' => File.join(project_root, 'Gemfile'),
+            'DATABASE_URL' => '',
+            'PATH' => ENV.fetch('PATH', nil)
           }
 
           stdout, stderr, status = Dir.chdir(project_root) do

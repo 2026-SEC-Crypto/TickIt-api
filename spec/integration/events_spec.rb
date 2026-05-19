@@ -19,7 +19,7 @@ RSpec.describe 'TickIt API - Events' do
   end
 
   before(:each) do
-    db = TickIt::Api::DB
+    db = TickIt::DB
     TABLES_CLEAR_ORDER.each { |table| db[table].delete }
 
     # Create a test event using EventService
@@ -102,7 +102,7 @@ RSpec.describe 'TickIt API - Events' do
   describe 'SAD Path Tests' do
     describe 'GET /api/v1/events' do
       it 'returns an empty list when no events exist' do
-        TickIt::Api::DB[:events].delete
+        TickIt::DB[:events].delete
 
         get '/api/v1/events'
 

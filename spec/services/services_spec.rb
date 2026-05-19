@@ -7,11 +7,11 @@ require_relative '../spec_helper'
 
 describe 'TickIt Services' do
   before(:each) do
-    TickIt::Api::DB.run('PRAGMA foreign_keys = OFF')
-    TickIt::Api::DB[:attendance_records].delete
-    TickIt::Api::DB[:events].delete
-    TickIt::Api::DB[:accounts].delete
-    TickIt::Api::DB.run('PRAGMA foreign_keys = ON')
+    TickIt::DB.run('PRAGMA foreign_keys = OFF')
+    TickIt::DB[:attendance_records].delete
+    TickIt::DB[:events].delete
+    TickIt::DB[:accounts].delete
+    TickIt::DB.run('PRAGMA foreign_keys = ON')
   end
   describe TickIt::EventService do
     describe '.parse_time' do
@@ -249,7 +249,7 @@ describe 'TickIt Services' do
       end
 
       it 'raises error when no event is available' do
-        TickIt::Api::DB[:events].delete
+        TickIt::DB[:events].delete
 
         expect do
           TickIt::AttendanceRecordService.create_record(

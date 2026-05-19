@@ -2,11 +2,11 @@
 
 Sequel.seed(:development, :test) do
   def run
-    TickIt::Api::DB.transaction do
-      TickIt::Api::DB[:accounts_events].delete
-      TickIt::Api::DB[:attendance_records].delete
-      TickIt::Api::DB[:events].delete
-      TickIt::Api::DB[:accounts].delete
+    TickIt::DB.transaction do
+      TickIt::DB[:accounts_events].delete
+      TickIt::DB[:attendance_records].delete
+      TickIt::DB[:events].delete
+      TickIt::DB[:accounts].delete
 
       accounts = [
         { email: 'alice@example.com', password: 'alice_password_123', role: 'organizer' },

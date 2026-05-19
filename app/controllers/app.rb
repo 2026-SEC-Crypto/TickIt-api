@@ -85,9 +85,7 @@ module TickIt
 
     # Authorization helper methods for API routes
     def current_user
-      return nil if session[:user_id].nil?
-
-      TickIt::SessionService.current_user(session[:user_id])
+      TickIt::SessionService.current_user(session)
     end
 
     def authorized?(action)
@@ -135,4 +133,6 @@ module TickIt
       user.organizer? || user.admin?
     end
   end
+
+  Api.const_set(:DB, DB) unless Api.const_defined?(:DB)
 end

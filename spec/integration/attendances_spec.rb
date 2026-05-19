@@ -23,7 +23,7 @@ RSpec.describe 'TickIt API - Attendances' do
   end
 
   before(:each) do
-    db = TickIt::Api::DB
+    db = TickIt::DB
     TABLES_CLEAR_ORDER.each { |table| db[table].delete }
 
     # Create a test event using EventService

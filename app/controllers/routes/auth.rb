@@ -3,15 +3,18 @@
 module TickIt
   class Api < Roda
     route('auth') do |r|
-      # 處理 POST /api/v1/auth/authenticate
+      # POST /api/v1/auth/authenticate
       r.on 'authenticate' do
         r.post do
           credentials = JSON.parse(r.body.read, symbolize_names: true)
 
-          # 這裡需要確保你的 AccountService 裡有 authenticate 方法
-          account = TickIt::AccountService.authenticate(credentials)
+          account = TickIt::AccountService.authenticate(
+            email: credentials[:email],
+            password: credentials[:password]
+          )
 
           if account
+            session.update(TickIt::SessionService.create_session(account))
             response.status = 200
             {
               account: {
@@ -27,6 +30,39 @@ module TickIt
         rescue JSON::ParserError
           response.status = 400
           { error: 'Invalid JSON format' }.to_json
+        end
+      end
+
+      # POST /api/v1/auth/register — public signup for the web UI
+      r.on 'register' do
+        r.post do
+          data = JSON.parse(r.body.read, symbolize_names: true)
+
+          account = TickIt::AccountService.create_account(
+            email: data[:email],
+            password: data[:password],
+            role: data[:role] || 'member'
+          )
+
+          response.status = 201
+          {
+            message: 'Account created successfully',
+            account: {
+              id: account.id,
+              email: account.email,
+              role: account.role
+            }
+          }.to_json
+        rescue JSON::ParserError
+          response.status = 400
+          { error: 'Invalid JSON format' }.to_json
+        rescue ArgumentError => e
+          response.status = 400
+          { error: e.message }.to_json
+        rescue StandardError => e
+          status = e.message.include?('already exists') ? 409 : 400
+          response.status = status
+          { error: e.message }.to_json
         end
       end
     end
