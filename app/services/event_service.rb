@@ -22,6 +22,15 @@ module TickIt
       Event.order(:id).map(&:to_api_hash)
     end
 
+    # Retrieve events where the given account is a collaborator
+    def self.events_for_account(account_id)
+      Event
+        .join(:accounts_events, event_id: :id)
+        .where(Sequel[:accounts_events][:account_id] => account_id.to_s)
+        .order(Sequel[:events][:id])
+        .map(&:to_api_hash)
+    end
+
     # Retrieve a single event by ID
     def self.find_event(id)
       Event.with_pk(id.to_s)

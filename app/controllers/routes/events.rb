@@ -18,7 +18,13 @@ module TickIt
 
       r.is do
         r.get do
-          { events: TickIt::EventService.all_events }.to_json
+          account = account_from_token
+          if account.nil?
+            response.status = 401
+            next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+          end
+
+          { events: TickIt::EventService.events_for_account(account.id) }.to_json
         end
 
         r.post do
