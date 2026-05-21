@@ -4,6 +4,7 @@ require 'digest'
 require_relative '../models/account'
 require_relative '../models/event'
 require_relative '../../lib/security_log'
+require_relative '../../lib/auth_token'
 
 module TickIt
   # Service object for managing Account resources
@@ -19,26 +20,32 @@ module TickIt
     end
 
     # Create a new account with validation
+    # Returns full API hash with auth token on success
     def self.create_account(email:, password:, role: 'member')
       validate_account_params(email:, password:)
 
-      Account.create(
+      account = Account.create(
         email:,
         password:,
         role:
       )
+
+      # Return full API hash with auth token
+      account_to_api_hash(account)
     rescue Sequel::UniqueConstraintViolation, SQLite3::ConstraintException
       raise "Account with email '#{email}' already exists"
     end
 
     # Authenticate account with password
+    # Returns full API hash with auth token on success, nil on failure
     def self.authenticate(email:, password:)
       # Find account by email hash for security
       account = find_by_email(email)
       return nil unless account
       return nil unless account.password?(password)
 
-      account
+      # Return full API hash with auth token
+      account_to_api_hash(account)
     end
 
     # Find account by email
@@ -113,10 +120,17 @@ module TickIt
     end
 
     def self.account_to_api_hash(account)
+      auth_token = AuthToken.generate(
+        account_id: account.id,
+        email: account.email,
+        role: account.role
+      )
+
       {
         id: account.id,
         email: account.email,
-        role: account.role
+        role: account.role,
+        auth_token: auth_token
       }
     end
   end

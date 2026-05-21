@@ -8,19 +8,20 @@ module TickIt
         r.post do
           credentials = JSON.parse(r.body.read, symbolize_names: true)
 
-          account = TickIt::AccountService.authenticate(
+          account_data = TickIt::AccountService.authenticate(
             email: credentials[:email],
             password: credentials[:password]
           )
 
-          if account
-            session.update(TickIt::SessionService.create_session(account))
+          if account_data
+            session.update(TickIt::SessionService.create_session(account_data))
             response.status = 200
             {
               account: {
-                id: account.id,
-                email: account.email,
-                role: account.role
+                id: account_data[:id],
+                email: account_data[:email],
+                role: account_data[:role],
+                auth_token: account_data[:auth_token]
               }
             }.to_json
           else
@@ -38,7 +39,7 @@ module TickIt
         r.post do
           data = JSON.parse(r.body.read, symbolize_names: true)
 
-          account = TickIt::AccountService.create_account(
+          account_data = TickIt::AccountService.create_account(
             email: data[:email],
             password: data[:password],
             role: data[:role] || 'member'
@@ -48,9 +49,10 @@ module TickIt
           {
             message: 'Account created successfully',
             account: {
-              id: account.id,
-              email: account.email,
-              role: account.role
+              id: account_data[:id],
+              email: account_data[:email],
+              role: account_data[:role],
+              auth_token: account_data[:auth_token]
             }
           }.to_json
         rescue JSON::ParserError
