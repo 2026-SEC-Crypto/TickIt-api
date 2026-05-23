@@ -3,7 +3,7 @@
 require 'dry-validation'
 
 module TickIt
-  EventForm = Dry::Validation.Contract do
+  class EventForm < Dry::Validation::Contract
     params do
       required(:name).filled(:string)
       required(:location).filled(:string)

@@ -3,7 +3,7 @@
 require 'dry-validation'
 
 module TickIt
-  AuthenticateForm = Dry::Validation.Contract do
+  class AuthenticateForm < Dry::Validation::Contract
     params do
       required(:email).filled(:string)
       required(:password).filled(:string)
