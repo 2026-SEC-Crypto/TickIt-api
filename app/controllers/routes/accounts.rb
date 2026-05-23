@@ -16,6 +16,7 @@ module TickIt
         {
           account: {
             id: target.id,
+            username: target.username,
             email: target.email,
             role: target.role
           }
