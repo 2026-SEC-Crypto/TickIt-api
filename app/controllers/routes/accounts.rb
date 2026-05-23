@@ -4,9 +4,10 @@ module TickIt
   class Api < Roda
     route('accounts') do |r|
       r.get String do |account_id|
-        account = TickIt::AccountService.find_account(account_id)
+        requester = account_from_token
+        target = TickIt::AccountService.find_account(account_id)
 
-        if account.nil?
+        if target.nil? || !TickIt::AccountPolicy.new(requester, target).can_view?
           response.status = 404
           next({ error: 'Account not found' }.to_json)
         end
@@ -14,9 +15,9 @@ module TickIt
         response.status = 200
         {
           account: {
-            id: account.id,
-            email: account.email,
-            role: account.role
+            id: target.id,
+            email: target.email,
+            role: target.role
           }
         }.to_json
       end
@@ -33,7 +34,7 @@ module TickIt
         response.status = 201
         {
           message: 'Account created successfully',
-          account: { id: account.id, email: account.email, role: account.role }
+          account: { id: account[:id], email: account[:email], role: account[:role] }
         }.to_json
       rescue JSON::ParserError
         response.status = 400

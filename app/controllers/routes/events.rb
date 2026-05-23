@@ -6,13 +6,15 @@ module TickIt
       r.is String do |id_segment|
         r.get do
           id = id_segment.sub(/\.json\z/, '')
+          account = account_from_token
           event = TickIt::EventService.find_event(id)
-          if event
-            { event: event.to_api_hash }.to_json
-          else
+
+          if event.nil? || !TickIt::EventPolicy.new(account, event).can_view?
             response.status = 404
-            { error: 'Event not found' }.to_json
+            next({ error: 'Event not found' }.to_json)
           end
+
+          { event: event.to_api_hash }.to_json
         end
       end
 
@@ -24,11 +26,21 @@ module TickIt
             next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
           end
 
-          { events: TickIt::EventService.events_for_account(account.id) }.to_json
+          events = TickIt::EventPolicy::Scope.new(account).viewable.map(&:to_api_hash)
+          { events: events }.to_json
         end
 
         r.post do
-          require_authorization!('create_event', 'Event')
+          account = account_from_token
+          if account.nil?
+            response.status = 401
+            next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+          end
+
+          unless TickIt::EventPolicy.new(account, nil).can_create?
+            response.status = 403
+            next({ error: 'Forbidden: insufficient permissions' }.to_json)
+          end
 
           body = JSON.parse(r.body.read)
           form = TickIt::EventForm.new.call(body)
