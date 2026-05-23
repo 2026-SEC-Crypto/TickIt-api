@@ -21,13 +21,14 @@ module TickIt
 
     # Create a new account with validation
     # Returns full API hash with auth token on success
-    def self.create_account(email:, password:, role: 'member')
+    def self.create_account(email:, password:, role: 'member', username: nil)
       validate_account_params(email:, password:)
 
       account = Account.create(
         email:,
         password:,
-        role:
+        role:,
+        username: username&.to_s&.strip
       )
 
       # Return full API hash with auth token
@@ -128,6 +129,7 @@ module TickIt
 
       {
         id: account.id,
+        username: account.username,
         email: account.email,
         role: account.role,
         auth_token: auth_token

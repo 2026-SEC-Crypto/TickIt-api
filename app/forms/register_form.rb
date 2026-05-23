@@ -8,6 +8,7 @@ module TickIt
       required(:email).filled(:string)
       required(:password).filled(:string)
       optional(:role).filled(:string)
+      optional(:username).maybe(:string)
     end
 
     rule(:role) do

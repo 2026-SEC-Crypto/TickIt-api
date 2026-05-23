@@ -25,6 +25,7 @@ module TickIt
             {
               account: {
                 id: account_data[:id],
+                username: account_data[:username],
                 email: account_data[:email],
                 role: account_data[:role],
                 auth_token: account_data[:auth_token]
@@ -54,7 +55,8 @@ module TickIt
           account_data = TickIt::AccountService.create_account(
             email: form.values[:email],
             password: form.values[:password],
-            role: form.values[:role] || 'member'
+            role: form.values[:role] || 'member',
+            username: form.values[:username]
           )
 
           response.status = 201
@@ -62,6 +64,7 @@ module TickIt
             message: 'Account created successfully',
             account: {
               id: account_data[:id],
+              username: account_data[:username],
               email: account_data[:email],
               role: account_data[:role],
               auth_token: account_data[:auth_token]
