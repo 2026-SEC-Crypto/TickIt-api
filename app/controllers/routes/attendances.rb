@@ -54,7 +54,7 @@ module TickIt
           response.status = 400
           { error: e.message }.to_json
         rescue StandardError => e
-          response.status = 404
+          response.status = 400
           { error: e.message }.to_json
         end
       end

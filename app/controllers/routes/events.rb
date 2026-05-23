@@ -28,41 +28,22 @@ module TickIt
         end
 
         r.post do
-          # Only organizers and admins can create events (403 if unauthorized)
           require_authorization!('create_event', 'Event')
 
-          body = JSON.parse(r.body.read, symbolize_names: true)
+          body = JSON.parse(r.body.read)
+          form = TickIt::EventForm.new.call(body)
 
-          required = %i[name location start_time end_time]
-          missing = required.select do |field|
-            value = body[field]
-            value.nil? || (value.is_a?(String) && value.strip.empty?)
-          end
-
-          if missing.any?
+          unless form.success?
             response.status = 400
-            return { error: 'Missing required fields', missing: missing.map(&:to_s) }.to_json
-          end
-
-          allowed_keys = %i[name location start_time end_time description]
-          illegal_keys = body.keys - allowed_keys
-
-          if illegal_keys.any?
-            TickIt::SecurityLog.log_mass_assignment_warning(
-              'Event',
-              body.keys.map(&:to_s),
-              allowed_keys.map(&:to_s)
-            )
-            response.status = 400
-            return { error: 'Illegal mass assignment detected' }.to_json
+            next({ errors: form.errors.to_h }.to_json)
           end
 
           event = TickIt::EventService.create_event(
-            name: body[:name],
-            location: body[:location],
-            start_time: body[:start_time],
-            end_time: body[:end_time],
-            description: body[:description]
+            name: form.values[:name],
+            location: form.values[:location],
+            start_time: form.values[:start_time],
+            end_time: form.values[:end_time],
+            description: form.values[:description]
           )
 
           response.status = 201

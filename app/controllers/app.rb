@@ -7,6 +7,8 @@ require 'securerandom'
 require_relative '../../config/environments'
 require_relative '../../lib/security_log'
 require_relative '../../lib/auth_token'
+
+Dir.glob(File.expand_path('../../forms/*.rb', __dir__)).each { |f| require f }
 require_relative '../models/event'
 require_relative '../models/attendance_record'
 require_relative '../models/account'

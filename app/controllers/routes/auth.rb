@@ -6,11 +6,17 @@ module TickIt
       # POST /api/v1/auth/authenticate
       r.on 'authenticate' do
         r.post do
-          credentials = JSON.parse(r.body.read, symbolize_names: true)
+          body = JSON.parse(r.body.read)
+          form = TickIt::AuthenticateForm.new.call(body)
+
+          unless form.success?
+            response.status = 400
+            next({ errors: form.errors.to_h }.to_json)
+          end
 
           account_data = TickIt::AccountService.authenticate(
-            email: credentials[:email],
-            password: credentials[:password]
+            email: form.values[:email],
+            password: form.values[:password]
           )
 
           if account_data
@@ -25,7 +31,7 @@ module TickIt
               }
             }.to_json
           else
-            response.status = 403
+            response.status = 401
             { error: 'Invalid credentials' }.to_json
           end
         rescue JSON::ParserError
@@ -34,15 +40,21 @@ module TickIt
         end
       end
 
-      # POST /api/v1/auth/register — public signup for the web UI
+      # POST /api/v1/auth/register
       r.on 'register' do
         r.post do
-          data = JSON.parse(r.body.read, symbolize_names: true)
+          body = JSON.parse(r.body.read)
+          form = TickIt::RegisterForm.new.call(body)
+
+          unless form.success?
+            response.status = 400
+            next({ errors: form.errors.to_h }.to_json)
+          end
 
           account_data = TickIt::AccountService.create_account(
-            email: data[:email],
-            password: data[:password],
-            role: data[:role] || 'member'
+            email: form.values[:email],
+            password: form.values[:password],
+            role: form.values[:role] || 'member'
           )
 
           response.status = 201
@@ -58,9 +70,6 @@ module TickIt
         rescue JSON::ParserError
           response.status = 400
           { error: 'Invalid JSON format' }.to_json
-        rescue ArgumentError => e
-          response.status = 400
-          { error: e.message }.to_json
         rescue StandardError => e
           status = e.message.include?('already exists') ? 409 : 400
           response.status = status
