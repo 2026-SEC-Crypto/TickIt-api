@@ -79,5 +79,50 @@ module TickIt
     def organizer?
       role == 'organizer'
     end
+
+    # ---------------------------------------------------------
+    # 4. System-Level Capabilities
+    # ---------------------------------------------------------
+
+    # Returns a comprehensive hash of system-level privileges for this account
+    # Defines what this account can do across the system based on its role
+    # @return [Hash] System capabilities organized by resource type and action
+    def capabilities # rubocop:disable Metrics/MethodLength,Metrics/AbcSize
+      {
+        system_privileges: {
+          is_admin: admin?,
+          is_organizer: organizer?,
+          is_member: member?,
+          role: role
+        },
+        account_management: {
+          view_own_profile: true,
+          update_own_profile: true,
+          delete_own_account: true,
+          view_all_accounts: admin?,
+          create_accounts: admin?,
+          update_any_account: admin?,
+          delete_any_account: admin?
+        },
+        event_management: {
+          view_all_events: ['member', 'admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          create_events: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          update_own_events: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          update_any_events: admin?,
+          delete_own_events: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          delete_any_events: admin?
+        },
+        attendance_management: {
+          view_own_attendance: true,
+          view_all_attendance: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          record_attendance: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          edit_attendance: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          delete_attendance: admin?
+        },
+        collaboration: {
+          can_collaborate_on_events: ['member', 'admin', 'organizer'].include?(role) # rubocop:disable Style/WordArray
+        }
+      }
+    end
   end
 end
