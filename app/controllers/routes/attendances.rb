@@ -5,38 +5,54 @@ module TickIt
     route('attendances') do |r|
       r.is String do |id|
         r.get do
+          account = account_from_token
           record = TickIt::AttendanceRecordService.find_record(id)
-          if record
-            record.api_json_hash.to_json
-          else
+
+          if record.nil? || !TickIt::AttendanceRecordPolicy.new(account, record).can_view?
             response.status = 404
-            { error: 'Attendance record not found' }.to_json
+            next({ error: 'Attendance record not found' }.to_json)
           end
+
+          record.api_json_hash.to_json
         end
       end
 
       r.is do
         r.get do
-          { attendance_ids: TickIt::AttendanceRecordService.all_attendance_records }.to_json
+          account = account_from_token
+          if account.nil?
+            response.status = 401
+            next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+          end
+
+          ids = TickIt::AttendanceRecordPolicy::Scope.new(account).viewable
+          { attendance_ids: ids }.to_json
         end
 
         r.post do
-          # Only members and organizers can record attendance (403 if unauthorized)
-          require_authorization!('record_attendance', 'AttendanceRecord')
+          account = account_from_token
+          if account.nil?
+            response.status = 401
+            next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+          end
+
+          unless TickIt::AttendanceRecordPolicy.new(account, nil).can_create?
+            response.status = 403
+            next({ error: 'Forbidden: insufficient permissions' }.to_json)
+          end
 
           body = JSON.parse(r.body.read, symbolize_names: true)
           allowed_keys = %i[student_id event_id timestamp location]
-          attempted_keys = body.keys
-          illegal_keys = attempted_keys - allowed_keys
+          illegal_keys = body.keys - allowed_keys
 
           if illegal_keys.any?
             TickIt::SecurityLog.log_mass_assignment_warning(
               'AttendanceRecord',
-              attempted_keys.map(&:to_s),
+              body.keys.map(&:to_s),
               allowed_keys.map(&:to_s)
             )
             response.status = 400
-            return { error: 'Illegal mass assignment detected' }.to_json
+            next({ error: 'Illegal mass assignment detected' }.to_json)
           end
 
           record = TickIt::AttendanceRecordService.create_record(
@@ -54,7 +70,7 @@ module TickIt
           response.status = 400
           { error: e.message }.to_json
         rescue StandardError => e
-          response.status = 404
+          response.status = 400
           { error: e.message }.to_json
         end
       end

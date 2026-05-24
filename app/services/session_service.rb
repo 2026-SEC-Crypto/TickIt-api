@@ -11,11 +11,11 @@ module TickIt
     # Create a session hash for a logged-in user
     # Called after successful authentication to populate session data
     # Session data is automatically encrypted by Roda and stored in HTTP-only cookie
-    def self.create_session(account)
+    def self.create_session(account_data)
       {
-        account_id: account.id,
-        email: account.email,
-        role: account.role,
+        account_id: account_data[:id],
+        email: account_data[:email],
+        role: account_data[:role],
         logged_in_at: Time.now
       }
     end

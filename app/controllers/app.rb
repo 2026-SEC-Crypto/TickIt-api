@@ -6,6 +6,10 @@ require 'securerandom'
 
 require_relative '../../config/environments'
 require_relative '../../lib/security_log'
+require_relative '../../lib/auth_token'
+
+Dir.glob(File.expand_path('../forms/*.rb', __dir__)).each { |f| require f }
+Dir.glob(File.expand_path('../policies/*.rb', __dir__)).each { |f| require f }
 require_relative '../models/event'
 require_relative '../models/attendance_record'
 require_relative '../models/account'
@@ -81,6 +85,21 @@ module TickIt
         response.status = 500
         { error: 'Internal server error' }.to_json
       end
+    end
+
+    # Identify the requesting account from the Bearer token in Authorization header.
+    # Returns the Account object, or nil if the token is missing, invalid, or expired.
+    def account_from_token
+      auth_header = request.env['HTTP_AUTHORIZATION']
+      token = TickIt::AuthToken.extract_from_header(auth_header)
+      return nil if token.nil?
+
+      payload = TickIt::AuthToken.verify(token)
+      return nil if payload.nil?
+
+      TickIt::Account.first(id: payload[:account_id].to_s)
+    rescue StandardError
+      nil
     end
 
     # Authorization helper methods for API routes

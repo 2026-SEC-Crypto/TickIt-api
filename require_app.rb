@@ -28,5 +28,8 @@ def require_app(load_models = nil) # rubocop:disable Metrics/MethodLength
     Dir.glob('app/models/*.rb').sort.each { |file| require_relative file }
     Dir.glob('app/services/*.rb').sort.each { |file| require_relative file }
   end
+
+  # Always load form objects
+  Dir.glob('app/forms/*.rb').sort.each { |file| require_relative file }
 end
 
