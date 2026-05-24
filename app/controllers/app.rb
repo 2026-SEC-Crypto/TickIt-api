@@ -70,6 +70,22 @@ module TickIt
         end
 
         r.on 'v1' do
+          # Policy summary endpoint
+          r.on 'policies' do
+            r.get 'summary' do
+              user = current_user
+              unless user
+                response.status = 401
+                next({ error: 'Unauthorized' }.to_json)
+              end
+              summaries = {
+                account: TickIt::AccountPolicy.new(user).summary,
+                event: TickIt::EventPolicy.new(user).summary,
+                attendance_record: TickIt::AttendanceRecordPolicy.new(user).summary
+              }
+              { policies: summaries }.to_json
+            end
+          end
           # 將請求分發給對應的子檔案處理
           r.on('events')      { r.route 'events' }
           r.on('attendances') { r.route 'attendances' }
