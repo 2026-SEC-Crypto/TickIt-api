@@ -13,7 +13,8 @@ module TickIt
             next({ error: 'Attendance record not found' }.to_json)
           end
 
-          record.api_json_hash.to_json
+          policy = TickIt::AttendanceRecordPolicy.new(account, record)
+          { record: record.api_json_hash, policy: policy.summary }.to_json
         end
       end
 

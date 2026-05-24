@@ -12,6 +12,7 @@ module TickIt
           next({ error: 'Account not found' }.to_json)
         end
 
+        policy = TickIt::AccountPolicy.new(requester, target)
         response.status = 200
         {
           account: {
@@ -19,7 +20,8 @@ module TickIt
             username: target.username,
             email: target.email,
             role: target.role
-          }
+          },
+          policy: policy.summary
         }.to_json
       end
 

@@ -14,7 +14,8 @@ module TickIt
             next({ error: 'Event not found' }.to_json)
           end
 
-          { event: event.to_api_hash }.to_json
+          policy = TickIt::EventPolicy.new(account, event)
+          { event: event.to_api_hash, policy: policy.summary }.to_json
         end
       end
 
