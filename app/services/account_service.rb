@@ -3,8 +3,8 @@
 require 'digest'
 require_relative '../models/account'
 require_relative '../models/event'
-require_relative '../../lib/security_log'
-require_relative '../../lib/auth_token'
+require_relative '../lib/security_log'
+require_relative '../lib/auth_token'
 
 module TickIt
   # Service object for managing Account resources

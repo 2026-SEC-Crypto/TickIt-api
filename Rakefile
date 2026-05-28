@@ -89,13 +89,13 @@ namespace :db do
   desc 'Run migrations'
   task migrate: %i[load print_env] do
     puts 'Migrating database to latest'
-    Sequel::Migrator.run(TickIt::DB, 'app/db/migrations')
+    Sequel::Migrator.run(TickIt::DB, 'db/migrations')
   end
 
   desc 'Rollback the last migration'
   task rollback: :load do
     puts "Rolling back #{@app.environment} database..."
-    latest_index = Sequel::Migrator.latest_migration_index(TickIt::DB, 'app/db/migrations')
+    latest_index = Sequel::Migrator.latest_migration_index(TickIt::DB, 'db/migrations')
     Sequel::Migrator.run(TickIt::DB, 'app/db/migrations', target: latest_index - 1)
     puts '✓ Rollback complete'
   end
@@ -111,7 +111,7 @@ namespace :db do
 
     Sequel.extension :seed
     Sequel::Seed.setup(@app.environment)
-    Sequel::Seeder.apply(TickIt::DB, 'seeds')
+    Sequel::Seeder.apply(TickIt::DB, 'db/seeds')
 
     puts '✓ Database seeded'
   end

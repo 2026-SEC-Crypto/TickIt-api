@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../models/account'
-require_relative '../../lib/security_log'
+require_relative '../lib/security_log'
 
 module TickIt
   # Authorization service for managing role-based access control

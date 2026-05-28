@@ -2,8 +2,8 @@
 
 require 'sequel'
 require 'digest' # Needed for SHA256 hashing
-require_relative '../../lib/key_stretching'
-require_relative '../../lib/secure_db' # Use your existing encryption tool
+require_relative '../lib/key_stretching'
+require_relative '../lib/secure_db'
 
 module TickIt
   # Account model to manage user authentication and secure details

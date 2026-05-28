@@ -2,8 +2,8 @@
 
 require 'securerandom'
 require 'digest'
-require_relative '../../lib/secure_db'
-require_relative '../../lib/security_log'
+require_relative '../lib/secure_db'
+require_relative '../lib/security_log'
 
 module TickIt
   # Scheduled activity or session that students can attend

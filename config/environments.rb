@@ -2,8 +2,8 @@
 
 require 'figaro'
 require 'sequel'
-require_relative '../lib/secure_db'
-require_relative '../lib/security_log'
+require_relative '../app/lib/secure_db'
+require_relative '../app/lib/security_log'
 
 module TickIt
   # Load config secrets into local environment variables (ENV)

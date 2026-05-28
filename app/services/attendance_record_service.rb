@@ -2,7 +2,7 @@
 
 require_relative '../models/attendance_record'
 require_relative '../models/event'
-require_relative '../../lib/security_log'
+require_relative '../lib/security_log'
 
 module TickIt
   # Service object for managing AttendanceRecord resources
