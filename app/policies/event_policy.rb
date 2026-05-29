@@ -110,10 +110,18 @@ module TickIt
       def viewable
         return [] unless @account
 
+        created_ids = TickIt::DB[:accounts_events]
+          .where(account_id: @account.id.to_s)
+          .select(:event_id)
+
+        attended_ids = TickIt::DB[:attendance_records]
+          .where(student_number: @account.id.to_s)
+          .select(:event_id)
+
         Event
-          .join(:accounts_events, event_id: :id)
-          .where(Sequel[:accounts_events][:account_id] => @account.id.to_s)
-          .order(Sequel[:events][:id])
+          .where(id: created_ids)
+          .or(id: attended_ids)
+          .order(:id)
       end
     end
   end
