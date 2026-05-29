@@ -87,7 +87,13 @@ module TickIt
             next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
           end
 
-          events = TickIt::EventPolicy::Scope.new(account).viewable.map(&:to_api_hash)
+          created_ids = TickIt::DB[:accounts_events]
+            .where(account_id: account.id.to_s)
+            .select_map(:event_id)
+
+          events = TickIt::EventPolicy::Scope.new(account).viewable.map do |e|
+            e.to_api_hash.merge(created_by_me: created_ids.include?(e.id.to_s))
+          end
           { events: events }.to_json
         end
 
