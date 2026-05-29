@@ -61,6 +61,8 @@ module TickIt
             description: form.values[:description]
           )
 
+          event.add_collaborator(account)
+
           response.status = 201
           { message: 'Event created', event: event.to_api_hash }.to_json
         rescue JSON::ParserError
