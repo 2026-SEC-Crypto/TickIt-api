@@ -65,6 +65,18 @@ module TickIt
           response.status = 400
           { error: e.message }.to_json
         end
+
+        r.delete do
+          unless TickIt::EventPolicy.new(account, event).can_delete?
+            response.status = 403
+            next({ error: 'Forbidden: insufficient permissions' }.to_json)
+          end
+
+          event.remove_all_collaborators
+          event.destroy
+          response.status = 200
+          { message: 'Event deleted successfully' }.to_json
+        end
       end
 
       r.is do
