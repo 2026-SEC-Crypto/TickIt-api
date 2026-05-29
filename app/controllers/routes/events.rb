@@ -159,7 +159,9 @@ module TickIt
             .where(account_id: account.id.to_s)
             .select_map(:event_id)
 
-          events = TickIt::EventPolicy::Scope.new(account).viewable.map do |e|
+          scope = r.params['mine'] == 'true' ? TickIt::EventPolicy::Scope.new(account).viewable : TickIt::Event.order(:start_time).all
+
+          events = scope.map do |e|
             e.to_api_hash.merge(created_by_me: created_ids.include?(e.id.to_s))
           end
           { events: events }.to_json
