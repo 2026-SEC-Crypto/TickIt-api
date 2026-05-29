@@ -55,7 +55,7 @@ module TickIt
           account_data = TickIt::AccountService.create_account(
             email: form.values[:email],
             password: form.values[:password],
-            role: form.values[:role] || 'member',
+            role: form.values[:role] || 'regular',
             username: form.values[:username]
           )
 

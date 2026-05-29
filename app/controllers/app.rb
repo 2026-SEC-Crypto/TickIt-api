@@ -161,11 +161,11 @@ module TickIt
       user.admin?
     end
 
-    def organizer_or_admin?
+    def teacher_or_admin?
       user = current_user
       return false if user.nil?
 
-      user.organizer? || user.admin?
+      user.teacher? || user.admin?
     end
   end
 

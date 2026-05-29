@@ -21,7 +21,7 @@ module TickIt
 
     # Create a new account with validation
     # Returns full API hash with auth token on success
-    def self.create_account(email:, password:, role: 'member', username: nil)
+    def self.create_account(email:, password:, role: 'regular', username: nil)
       validate_account_params(email:, password:)
 
       account = Account.create(
@@ -117,7 +117,7 @@ module TickIt
     end
 
     def self.valid_role?(role)
-      %w[member admin organizer].include?(role)
+      %w[regular admin teacher].include?(role)
     end
 
     def self.account_to_api_hash(account)

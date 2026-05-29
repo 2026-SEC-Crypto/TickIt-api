@@ -26,16 +26,12 @@ module TickIt
       account&.admin?
     end
 
-    # Check if account is organizer
-    # @return [Boolean]
-    def organizer?
-      account&.organizer?
+    def teacher?
+      account&.teacher?
     end
 
-    # Check if account is member
-    # @return [Boolean]
-    def member?
-      account&.member?
+    def regular?
+      account&.regular?
     end
 
     # Get numeric role priority (higher = more privileged)
@@ -45,8 +41,8 @@ module TickIt
 
       case account.role
       when 'admin' then 3
-      when 'organizer' then 2
-      when 'member' then 1
+      when 'teacher' then 2
+      when 'regular' then 1
       else 0
       end
     end

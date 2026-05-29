@@ -70,14 +70,12 @@ module TickIt
       role == 'admin'
     end
 
-    # Checks if the account is a regular member
-    def member?
-      role == 'member'
+    def regular?
+      role == 'regular'
     end
 
-    # (Optional) Checks if the user is an organizer (just as an example for "other roles")
-    def organizer?
-      role == 'organizer'
+    def teacher?
+      role == 'teacher'
     end
 
     # ---------------------------------------------------------
@@ -91,8 +89,8 @@ module TickIt
       {
         system_privileges: {
           is_admin: admin?,
-          is_organizer: organizer?,
-          is_member: member?,
+          is_teacher: teacher?,
+          is_regular: regular?,
           role: role
         },
         account_management: {
@@ -105,22 +103,22 @@ module TickIt
           delete_any_account: admin?
         },
         event_management: {
-          view_all_events: ['member', 'admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
-          create_events: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
-          update_own_events: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          view_all_events: ['regular', 'admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
+          create_events: ['admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
+          update_own_events: ['admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
           update_any_events: admin?,
-          delete_own_events: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          delete_own_events: ['admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
           delete_any_events: admin?
         },
         attendance_management: {
           view_own_attendance: true,
-          view_all_attendance: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
-          record_attendance: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
-          edit_attendance: ['admin', 'organizer'].include?(role), # rubocop:disable Style/WordArray
+          view_all_attendance: ['admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
+          record_attendance: ['admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
+          edit_attendance: ['admin', 'teacher'].include?(role), # rubocop:disable Style/WordArray
           delete_attendance: admin?
         },
         collaboration: {
-          can_collaborate_on_events: ['member', 'admin', 'organizer'].include?(role) # rubocop:disable Style/WordArray
+          can_collaborate_on_events: ['regular', 'admin', 'teacher'].include?(role) # rubocop:disable Style/WordArray
         }
       }
     end

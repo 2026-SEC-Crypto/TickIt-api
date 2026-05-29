@@ -9,6 +9,8 @@ module TickIt
       required(:location).filled(:string)
       required(:start_time).filled(:string)
       required(:end_time).filled(:string)
+      optional(:attendance_start_time).maybe(:string)
+      optional(:attendance_end_time).maybe(:string)
       optional(:description).maybe(:string)
     end
 

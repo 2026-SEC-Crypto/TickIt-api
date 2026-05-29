@@ -13,7 +13,7 @@ module TickIt
 
     rule(:role) do
       next unless value
-      key.failure('must be member, organizer, or admin') unless %w[member organizer admin].include?(value)
+      key.failure('must be regular, teacher, or admin') unless %w[regular teacher admin].include?(value)
     end
   end
 end

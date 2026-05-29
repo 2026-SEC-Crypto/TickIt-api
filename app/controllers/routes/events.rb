@@ -56,6 +56,8 @@ module TickIt
             location: form.values[:location],
             start_time: form.values[:start_time],
             end_time: form.values[:end_time],
+            attendance_start_time: form.values[:attendance_start_time],
+            attendance_end_time: form.values[:attendance_end_time],
             description: form.values[:description]
           )
 

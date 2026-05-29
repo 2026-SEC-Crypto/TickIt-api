@@ -37,17 +37,22 @@ module TickIt
     end
 
     # Create a new event with validation
-    def self.create_event(name:, location:, start_time:, end_time:, description: nil)
+    def self.create_event(name:, location:, start_time:, end_time:, description: nil,
+                          attendance_start_time: nil, attendance_end_time: nil)
       validate_event_params(name:, location:, start_time:, end_time:)
 
       start_t = parse_time(start_time)
       end_t = parse_time(end_time)
+      att_start = attendance_start_time ? parse_time(attendance_start_time) : nil
+      att_end = attendance_end_time ? parse_time(attendance_end_time) : nil
 
       Event.create(
         name: name.to_s.strip,
         location: location.to_s.strip,
         start_time: start_t,
         end_time: end_t,
+        attendance_start_time: att_start,
+        attendance_end_time: att_end,
         description: description&.to_s
       )
     rescue ArgumentError => e

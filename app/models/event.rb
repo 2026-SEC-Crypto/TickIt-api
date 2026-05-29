@@ -26,7 +26,8 @@ module TickIt
     # If an event is deleted, just remove the links in the join table, do not destroy the user accounts!
     add_association_dependencies collaborators: :nullify
     # Keep writable columns explicit to prevent mass assignment abuse.
-    set_allowed_columns :name, :description, :location, :start_time, :end_time
+    set_allowed_columns :name, :description, :location, :start_time, :end_time,
+                        :attendance_start_time, :attendance_end_time
 
     one_to_many :attendance_records, class: 'TickIt::AttendanceRecord'
 
@@ -61,6 +62,8 @@ module TickIt
         location: location,
         start_time: start_time&.iso8601,
         end_time: end_time&.iso8601,
+        attendance_start_time: attendance_start_time&.iso8601,
+        attendance_end_time: attendance_end_time&.iso8601,
         description: description,
         created_at: created_at&.iso8601,
         updated_at: updated_at&.iso8601

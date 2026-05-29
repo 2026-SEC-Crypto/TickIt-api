@@ -31,7 +31,7 @@ module TickIt
         account = TickIt::AccountService.create_account(
           email: account_data['email'],
           password: account_data['password'],
-          role: account_data['role'] || 'member'
+          role: account_data['role'] || 'regular'
         )
 
         response.status = 201
