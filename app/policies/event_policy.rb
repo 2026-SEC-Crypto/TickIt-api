@@ -35,7 +35,7 @@ module TickIt
     def update_own?
       return false unless authorized? && !record.nil?
 
-      admin? || (teacher? && record.account_id == account.id)
+      admin? || (teacher? && collaborator_of?)
     end
 
     def update_any?
@@ -47,7 +47,7 @@ module TickIt
     def delete_own?
       return false unless authorized? && !record.nil?
 
-      admin? || (teacher? && record.account_id == account.id)
+      admin? || (teacher? && collaborator_of?)
     end
 
     def delete_any?
@@ -57,9 +57,7 @@ module TickIt
     end
 
     def teacher_of?
-      return false unless authorized? && !record.nil?
-
-      record&.account_id == account.id
+      collaborator_of?
     end
 
     def collaborate?
@@ -96,6 +94,12 @@ module TickIt
           can_collaborate: collaborate?
         }
       }
+    end
+
+    def collaborator_of?
+      return false unless authorized? && !record.nil?
+
+      record.collaborators.any? { |c| c.id.to_s == account.id.to_s }
     end
 
     class Scope
