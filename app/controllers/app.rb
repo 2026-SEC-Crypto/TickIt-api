@@ -23,6 +23,7 @@ module TickIt
   class Api < Roda
     # Set up plugins
     plugin :halt
+    plugin :all_verbs
     plugin :multi_route
     plugin :environments
     plugin :common_logger, $stderr
