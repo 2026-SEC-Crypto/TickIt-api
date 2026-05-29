@@ -27,7 +27,7 @@ module TickIt
     add_association_dependencies collaborators: :nullify
     # Keep writable columns explicit to prevent mass assignment abuse.
     set_allowed_columns :name, :description, :location, :start_time, :end_time,
-                        :attendance_start_time, :attendance_end_time
+                        :attendance_start_time, :attendance_end_time, :series_id
 
     one_to_many :attendance_records, class: 'TickIt::AttendanceRecord'
 
@@ -65,6 +65,7 @@ module TickIt
         attendance_start_time: attendance_start_time&.iso8601,
         attendance_end_time: attendance_end_time&.iso8601,
         description: description,
+        series_id: series_id,
         created_at: created_at&.iso8601,
         updated_at: updated_at&.iso8601
       }

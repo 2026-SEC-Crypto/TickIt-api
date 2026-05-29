@@ -3,6 +3,74 @@
 module TickIt
   class Api < Roda
     route('events') do |r|
+      # Series routes must come before r.on String to avoid being captured
+      r.on 'series' do
+        r.on String do |series_id|
+          account = account_from_token
+          if account.nil?
+            response.status = 401
+            next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+          end
+
+          series_events = TickIt::Event.where(series_id: series_id).order(:start_time).all
+
+          if series_events.empty?
+            response.status = 404
+            next({ error: 'Series not found' }.to_json)
+          end
+
+          unless TickIt::EventPolicy.new(account, series_events.first).can_update?
+            response.status = 403
+            next({ error: 'Forbidden: insufficient permissions' }.to_json)
+          end
+
+          r.patch do
+            body = JSON.parse(r.body.read)
+
+            # Use first event's start_time as reference to compute attendance offsets
+            ref = series_events.first
+            att_start_offset = if body['attendance_start_time']
+              TickIt::EventService.parse_time(body['attendance_start_time']) - ref.start_time
+            end
+            att_end_offset = if body['attendance_end_time']
+              TickIt::EventService.parse_time(body['attendance_end_time']) - ref.start_time
+            end
+
+            series_events.each do |ev|
+              updates = {}
+              updates[:name]        = body['name']        if body.key?('name')
+              updates[:location]    = body['location']    if body.key?('location')
+              updates[:description] = body['description'] if body.key?('description')
+              updates[:attendance_start_time] = ev.start_time + att_start_offset if att_start_offset
+              updates[:attendance_end_time]   = ev.start_time + att_end_offset   if att_end_offset
+              ev.update(updates) unless updates.empty?
+            end
+
+            { message: "Updated #{series_events.size} events", series_id: series_id }.to_json
+          rescue JSON::ParserError
+            response.status = 400
+            { error: 'Invalid JSON format' }.to_json
+          rescue ArgumentError => e
+            response.status = 400
+            { error: e.message }.to_json
+          end
+
+          r.delete do
+            unless TickIt::EventPolicy.new(account, series_events.first).can_delete?
+              response.status = 403
+              next({ error: 'Forbidden: insufficient permissions' }.to_json)
+            end
+
+            count = series_events.size
+            series_events.each do |ev|
+              ev.remove_all_collaborators
+              ev.destroy
+            end
+            { message: "Deleted #{count} events" }.to_json
+          end
+        end
+      end
+
       r.on String do |id_segment|
         id = id_segment.sub(/\.json\z/, '')
         account = account_from_token
@@ -117,20 +185,38 @@ module TickIt
             next({ errors: form.errors.to_h }.to_json)
           end
 
-          event = TickIt::EventService.create_event(
-            name: form.values[:name],
-            location: form.values[:location],
-            start_time: form.values[:start_time],
-            end_time: form.values[:end_time],
-            attendance_start_time: form.values[:attendance_start_time],
-            attendance_end_time: form.values[:attendance_end_time],
-            description: form.values[:description]
-          )
+          repeat_weeks = form.values[:repeat_weeks].to_i
 
-          event.add_collaborator(account)
-
-          response.status = 201
-          { message: 'Event created', event: event.to_api_hash }.to_json
+          if repeat_weeks >= 2
+            events = TickIt::EventService.create_recurring_events(
+              name: form.values[:name],
+              location: form.values[:location],
+              start_time: form.values[:start_time],
+              end_time: form.values[:end_time],
+              attendance_start_time: form.values[:attendance_start_time],
+              attendance_end_time: form.values[:attendance_end_time],
+              description: form.values[:description],
+              repeat_weeks: repeat_weeks
+            )
+            events.each { |ev| ev.add_collaborator(account) }
+            response.status = 201
+            { message: "#{repeat_weeks} recurring events created",
+              events: events.map(&:to_api_hash),
+              series_id: events.first.series_id }.to_json
+          else
+            event = TickIt::EventService.create_event(
+              name: form.values[:name],
+              location: form.values[:location],
+              start_time: form.values[:start_time],
+              end_time: form.values[:end_time],
+              attendance_start_time: form.values[:attendance_start_time],
+              attendance_end_time: form.values[:attendance_end_time],
+              description: form.values[:description]
+            )
+            event.add_collaborator(account)
+            response.status = 201
+            { message: 'Event created', event: event.to_api_hash }.to_json
+          end
         rescue JSON::ParserError
           response.status = 400
           { error: 'Invalid JSON format' }.to_json

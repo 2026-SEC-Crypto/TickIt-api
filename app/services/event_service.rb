@@ -38,7 +38,7 @@ module TickIt
 
     # Create a new event with validation
     def self.create_event(name:, location:, start_time:, end_time:, description: nil,
-                          attendance_start_time: nil, attendance_end_time: nil)
+                          attendance_start_time: nil, attendance_end_time: nil, series_id: nil)
       validate_event_params(name:, location:, start_time:, end_time:)
 
       start_t = parse_time(start_time)
@@ -53,8 +53,43 @@ module TickIt
         end_time: end_t,
         attendance_start_time: att_start,
         attendance_end_time: att_end,
-        description: description&.to_s
+        description: description&.to_s,
+        series_id: series_id
       )
+    rescue ArgumentError => e
+      raise ArgumentError, "Invalid time format: #{e.message}"
+    end
+
+    # Batch-create weekly recurring events
+    def self.create_recurring_events(name:, location:, start_time:, end_time:, repeat_weeks:,
+                                     description: nil, attendance_start_time: nil, attendance_end_time: nil)
+      validate_event_params(name:, location:, start_time:, end_time:)
+
+      start_t   = parse_time(start_time)
+      end_t     = parse_time(end_time)
+      duration  = end_t - start_t
+      att_start = attendance_start_time ? parse_time(attendance_start_time) : nil
+      att_end   = attendance_end_time   ? parse_time(attendance_end_time)   : nil
+      att_start_offset = att_start ? att_start - start_t : nil
+      att_end_offset   = att_end   ? att_end   - start_t : nil
+
+      week_secs = 7 * 24 * 3600
+      sid = SecureRandom.uuid
+
+      repeat_weeks.times.map do |i|
+        s = start_t + (i * week_secs)
+        e = s + duration
+        Event.create(
+          name: name.to_s.strip,
+          location: location.to_s.strip,
+          start_time: s,
+          end_time: e,
+          attendance_start_time: att_start_offset ? s + att_start_offset : nil,
+          attendance_end_time:   att_end_offset   ? s + att_end_offset   : nil,
+          description: description&.to_s,
+          series_id: sid
+        )
+      end
     rescue ArgumentError => e
       raise ArgumentError, "Invalid time format: #{e.message}"
     end

@@ -12,6 +12,7 @@ module TickIt
       optional(:attendance_start_time).maybe(:string)
       optional(:attendance_end_time).maybe(:string)
       optional(:description).maybe(:string)
+      optional(:repeat_weeks).maybe(:integer)
     end
 
     rule(:start_time, :end_time) do
