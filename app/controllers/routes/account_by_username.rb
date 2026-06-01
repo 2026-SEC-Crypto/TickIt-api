@@ -2,7 +2,7 @@
 
 module TickIt
   class Api < Roda
-    route('account') do |r|
+    route('account_by_username') do |r|
       r.get String do |username|
         requester = account_from_token
         if requester.nil?
