@@ -124,7 +124,8 @@ module TickIt
       auth_token = AuthToken.generate(
         account_id: account.id,
         email: account.email,
-        role: account.role
+        role: account.role,
+        scope: AuthScope::FULL_ACCESS
       )
 
       {
@@ -134,6 +135,16 @@ module TickIt
         role: account.role,
         auth_token: auth_token
       }
+    end
+
+    def self.generate_api_key(account)
+      AuthToken.generate(
+        account_id: account.id,
+        email: account.email,
+        role: account.role,
+        scope: AuthScope::READ_ONLY,
+        expiry_hours: AuthToken::API_KEY_EXPIRY_HOURS
+      )
     end
   end
 end

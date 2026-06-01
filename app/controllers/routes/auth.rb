@@ -79,6 +79,20 @@ module TickIt
           { error: e.message }.to_json
         end
       end
+
+      r.on 'api_key' do
+        r.post do
+          account = account_from_token
+          if account.nil?
+            response.status = 401
+            next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+          end
+
+          api_key = TickIt::AccountService.generate_api_key(account)
+          { api_key: api_key, scope: TickIt::AuthScope::READ_ONLY,
+            note: 'This key provides read-only access. Use as: Authorization: Bearer <key>' }.to_json
+        end
+      end
     end
   end
 end

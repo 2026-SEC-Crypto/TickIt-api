@@ -9,15 +9,15 @@ module TickIt
     end
 
     def can_create?
-      create?
+      scope_allows_write?('events') && create?
     end
 
     def can_update?
-      update_own? || update_any?
+      scope_allows_write?('events') && (update_own? || update_any?)
     end
 
     def can_delete?
-      delete_own? || delete_any?
+      scope_allows_write?('events') && (delete_own? || delete_any?)
     end
 
     def view?

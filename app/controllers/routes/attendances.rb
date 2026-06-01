@@ -8,12 +8,12 @@ module TickIt
           account = account_from_token
           record = TickIt::AttendanceRecordService.find_record(id)
 
-          if record.nil? || !TickIt::AttendanceRecordPolicy.new(account, record).can_view?
+          if record.nil? || !TickIt::AttendanceRecordPolicy.new(account, record, scope: scope_from_token).can_view?
             response.status = 404
             next({ error: 'Attendance record not found' }.to_json)
           end
 
-          policy = TickIt::AttendanceRecordPolicy.new(account, record)
+          policy = TickIt::AttendanceRecordPolicy.new(account, record, scope: scope_from_token)
           { record: record.api_json_hash, policy: policy.summary }.to_json
         end
       end
@@ -37,7 +37,7 @@ module TickIt
             next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
           end
 
-          unless TickIt::AttendanceRecordPolicy.new(account, nil).can_create?
+          unless TickIt::AttendanceRecordPolicy.new(account, nil, scope: scope_from_token).can_create?
             response.status = 403
             next({ error: 'Forbidden: insufficient permissions' }.to_json)
           end

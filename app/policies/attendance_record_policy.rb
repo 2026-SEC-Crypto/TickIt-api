@@ -9,15 +9,15 @@ module TickIt
     end
 
     def can_create?
-      record_attendance?
+      scope_allows_write?('attendances') && record_attendance?
     end
 
     def can_update?
-      edit?
+      scope_allows_write?('attendances') && edit?
     end
 
     def can_delete?
-      delete?
+      scope_allows_write?('attendances') && delete?
     end
 
     def view_own?

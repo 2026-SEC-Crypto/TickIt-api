@@ -7,6 +7,7 @@ require 'securerandom'
 require_relative '../../config/environments'
 require_relative '../lib/security_log'
 require_relative '../lib/auth_token'
+require_relative '../lib/auth_scope'
 
 Dir.glob(File.expand_path('../forms/*.rb', __dir__)).each { |f| require f }
 Dir.glob(File.expand_path('../policies/*.rb', __dir__)).each { |f| require f }
@@ -92,6 +93,7 @@ module TickIt
           r.on('attendances') { r.route 'attendances' }
           r.on('students')    { r.route 'students' }
           r.on('accounts')    { r.route 'accounts' }
+          r.on('account')     { r.route 'account_by_username' }
           r.on('auth')        { r.route 'auth' }
         end
 
@@ -106,17 +108,29 @@ module TickIt
 
     # Identify the requesting account from the Bearer token in Authorization header.
     # Returns the Account object, or nil if the token is missing, invalid, or expired.
-    def account_from_token
+    def token_payload
       auth_header = request.env['HTTP_AUTHORIZATION']
       token = TickIt::AuthToken.extract_from_header(auth_header)
       return nil if token.nil?
 
-      payload = TickIt::AuthToken.verify(token)
+      TickIt::AuthToken.verify(token)
+    rescue StandardError
+      nil
+    end
+
+    def account_from_token
+      payload = token_payload
       return nil if payload.nil?
 
       TickIt::Account.first(id: payload[:account_id].to_s)
     rescue StandardError
       nil
+    end
+
+    def scope_from_token
+      payload = token_payload
+      scope_str = payload&.dig(:scope) || TickIt::AuthScope::FULL_ACCESS
+      TickIt::AuthScope.new(scope_str)
     end
 
     # Authorization helper methods for API routes

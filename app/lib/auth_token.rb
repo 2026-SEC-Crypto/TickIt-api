@@ -3,6 +3,7 @@
 require 'json'
 require 'time'
 require_relative 'securable'
+require_relative 'auth_scope'
 
 module TickIt
   # AuthToken library for creating, validating, and verifying authentication tokens
@@ -16,13 +17,16 @@ module TickIt
     # @param email [String] account email address
     # @param role [String] account role (member, organizer, admin)
     # @return [String] encrypted token containing account data and expiration
-    def self.generate(account_id:, email:, role:)
+    API_KEY_EXPIRY_HOURS = 24 * 365 # API keys valid for 1 year
+
+    def self.generate(account_id:, email:, role:, scope: AuthScope::FULL_ACCESS, expiry_hours: TOKEN_EXPIRY_HOURS)
       payload = {
         account_id: account_id,
         email: email,
         role: role,
+        scope: scope,
         issued_at: Time.now.to_i,
-        expires_at: (Time.now + (TOKEN_EXPIRY_HOURS * 3600)).to_i
+        expires_at: (Time.now + (expiry_hours * 3600)).to_i
       }
 
       # Encrypt the JSON payload

@@ -19,7 +19,7 @@ module TickIt
             next({ error: 'Series not found' }.to_json)
           end
 
-          unless TickIt::EventPolicy.new(account, series_events.first).can_update?
+          unless TickIt::EventPolicy.new(account, series_events.first, scope: scope_from_token).can_update?
             response.status = 403
             next({ error: 'Forbidden: insufficient permissions' }.to_json)
           end
@@ -56,7 +56,7 @@ module TickIt
           end
 
           r.delete do
-            unless TickIt::EventPolicy.new(account, series_events.first).can_delete?
+            unless TickIt::EventPolicy.new(account, series_events.first, scope: scope_from_token).can_delete?
               response.status = 403
               next({ error: 'Forbidden: insufficient permissions' }.to_json)
             end
@@ -76,7 +76,7 @@ module TickIt
         account = account_from_token
         event = TickIt::EventService.find_event(id)
 
-        if event.nil? || !TickIt::EventPolicy.new(account, event).can_view?
+        if event.nil? || !TickIt::EventPolicy.new(account, event, scope: scope_from_token).can_view?
           response.status = 404
           next({ error: 'Event not found' }.to_json)
         end
@@ -93,12 +93,12 @@ module TickIt
               }
             end
 
-          policy = TickIt::EventPolicy.new(account, event)
+          policy = TickIt::EventPolicy.new(account, event, scope: scope_from_token)
           { event: event.to_api_hash, attendees: attendees, policy: policy.summary }.to_json
         end
 
         r.patch do
-          unless TickIt::EventPolicy.new(account, event).can_update?
+          unless TickIt::EventPolicy.new(account, event, scope: scope_from_token).can_update?
             response.status = 403
             next({ error: 'Forbidden: insufficient permissions' }.to_json)
           end
@@ -135,7 +135,7 @@ module TickIt
         end
 
         r.delete do
-          unless TickIt::EventPolicy.new(account, event).can_delete?
+          unless TickIt::EventPolicy.new(account, event, scope: scope_from_token).can_delete?
             response.status = 403
             next({ error: 'Forbidden: insufficient permissions' }.to_json)
           end
@@ -174,7 +174,7 @@ module TickIt
             next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
           end
 
-          unless TickIt::EventPolicy.new(account, nil).can_create?
+          unless TickIt::EventPolicy.new(account, nil, scope: scope_from_token).can_create?
             response.status = 403
             next({ error: 'Forbidden: insufficient permissions' }.to_json)
           end

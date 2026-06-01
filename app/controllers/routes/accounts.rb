@@ -7,12 +7,12 @@ module TickIt
         requester = account_from_token
         target = TickIt::AccountService.find_account(account_id)
 
-        if target.nil? || !TickIt::AccountPolicy.new(requester, target).can_view?
+        if target.nil? || !TickIt::AccountPolicy.new(requester, target, scope: scope_from_token).can_view?
           response.status = 404
           next({ error: 'Account not found' }.to_json)
         end
 
-        policy = TickIt::AccountPolicy.new(requester, target)
+        policy = TickIt::AccountPolicy.new(requester, target, scope: scope_from_token)
         response.status = 200
         {
           account: {

@@ -4,14 +4,24 @@ module TickIt
   # Base policy class for authorization checks
   # Provides framework for permission evaluation and summarization
   class Policy
-    attr_reader :account, :record
+    attr_reader :account, :record, :scope
 
-    # Initialize with an account (subject) and optional record (object)
     # @param account [Account] The account performing the action
     # @param record [Object] Optional record being acted upon
-    def initialize(account, record = nil)
+    # @param scope [AuthScope] Authorization scope from the token
+    def initialize(account, record = nil, scope: AuthScope.new)
       @account = account
-      @record = record
+      @record  = record
+      @scope   = scope
+    end
+
+    # Returns false if the token scope disallows write on this resource
+    def scope_allows_write?(resource = '*')
+      @scope.can?('write', resource)
+    end
+
+    def scope_allows_read?(resource = '*')
+      @scope.can?('read', resource)
     end
 
     # Check if account is authorized
