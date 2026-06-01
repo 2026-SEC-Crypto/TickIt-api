@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'digest'
+require 'securerandom'
 require_relative '../models/account'
 require_relative '../models/event'
 require_relative '../lib/security_log'
@@ -11,6 +12,7 @@ module TickIt
   # Service object for managing Account resources
   class AccountService
     extend TickIt::TokenVerifiable
+
     # Retrieve all accounts (only public information)
     def self.all_accounts
       Account.map { |acc| account_to_api_hash(acc) }
@@ -55,6 +57,38 @@ module TickIt
     def self.find_by_email(email)
       email_hash = Digest::SHA256.hexdigest(email)
       Account.first(email_hash:)
+    end
+
+    def self.find_or_create_sso_account(provider:, sub:, email:, username: nil, avatar_url: nil)
+      account = Account.first(sso_provider: provider, sso_sub: sub)
+      return account_to_api_hash(account) if account
+
+      account = find_by_email(email)
+      if account
+        account.update(
+          sso_provider: provider,
+          sso_sub: sub,
+          avatar_url: avatar_url,
+          username: account.username || username
+        )
+        return account_to_api_hash(account)
+      end
+
+      generated_password = SecureRandom.hex(32)
+      account = Account.create(
+        email: email,
+        password: generated_password,
+        role: 'regular',
+        username: username,
+        sso_provider: provider,
+        sso_sub: sub,
+        avatar_url: avatar_url
+      )
+
+      account_to_api_hash(account)
+    rescue Sequel::UniqueConstraintViolation, SQLite3::ConstraintException
+      account = find_by_email(email)
+      account ? account_to_api_hash(account) : (raise 'Unable to create SSO account')
     end
 
     # Update account (limited fields to prevent mass assignment)
@@ -150,6 +184,7 @@ module TickIt
         username: account.username,
         email: account.email,
         role: account.role,
+        avatar_url: account.respond_to?(:avatar_url) ? account.avatar_url : nil,
         auth_token: auth_token
       }
     end

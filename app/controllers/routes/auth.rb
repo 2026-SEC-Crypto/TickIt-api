@@ -80,6 +80,54 @@ module TickIt
         end
       end
 
+      # POST /api/v1/auth/sso
+      r.on 'sso' do
+        r.post do
+          body = JSON.parse(r.body.read)
+          form = TickIt::SsoForm.new.call(body)
+
+          unless form.success?
+            response.status = 400
+            next({ errors: form.errors.to_h }.to_json)
+          end
+
+          provider = form.values[:provider].to_s
+          id_token = form.values[:id_token].to_s
+
+          payload = TickIt::SsoService.verify(provider: provider, id_token: id_token)
+          email = payload['email'].to_s
+          username = payload['name'].to_s.strip
+          username = email.split('@').first if username.empty?
+
+          account_data = TickIt::AccountService.find_or_create_sso_account(
+            provider: provider,
+            sub: payload['sub'].to_s,
+            email: email,
+            username: username,
+            avatar_url: payload['picture']
+          )
+
+          session.update(TickIt::SessionService.create_session(account_data))
+          response.status = 200
+          {
+            account: {
+              id: account_data[:id],
+              username: account_data[:username],
+              email: account_data[:email],
+              role: account_data[:role],
+              avatar_url: account_data[:avatar_url],
+              auth_token: account_data[:auth_token]
+            }
+          }.to_json
+        rescue TickIt::SsoService::InvalidToken => e
+          response.status = 401
+          { error: e.message }.to_json
+        rescue JSON::ParserError
+          response.status = 400
+          { error: 'Invalid JSON format' }.to_json
+        end
+      end
+
       r.on 'api_key' do
         r.post do
           account = account_from_token
