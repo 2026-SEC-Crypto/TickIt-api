@@ -133,6 +133,11 @@ module TickIt
       TickIt::AuthScope.new(scope_str)
     end
 
+    def raw_token
+      auth_header = request.env['HTTP_AUTHORIZATION']
+      TickIt::AuthToken.extract_from_header(auth_header)
+    end
+
     # Authorization helper methods for API routes
     def current_user
       TickIt::SessionService.current_user(session)

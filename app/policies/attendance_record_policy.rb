@@ -5,7 +5,7 @@ require_relative 'policy'
 module TickIt
   class AttendanceRecordPolicy < Policy
     def can_view?
-      view_own? || view_all?
+      scope_allows_read?('attendances') && (view_own? || view_all?)
     end
 
     def can_create?

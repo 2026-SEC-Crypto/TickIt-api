@@ -5,7 +5,7 @@ require_relative 'policy'
 module TickIt
   class EventPolicy < Policy
     def can_view?
-      view?
+      scope_allows_read?('events') && view?
     end
 
     def can_create?

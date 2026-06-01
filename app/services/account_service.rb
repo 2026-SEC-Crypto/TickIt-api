@@ -5,10 +5,12 @@ require_relative '../models/account'
 require_relative '../models/event'
 require_relative '../lib/security_log'
 require_relative '../lib/auth_token'
+require_relative '../lib/token_verifiable'
 
 module TickIt
   # Service object for managing Account resources
   class AccountService
+    extend TickIt::TokenVerifiable
     # Retrieve all accounts (only public information)
     def self.all_accounts
       Account.map { |acc| account_to_api_hash(acc) }
@@ -67,6 +69,21 @@ module TickIt
 
       account.update(safe_updates) if safe_updates.any?
       account
+    end
+
+    # Retrieve account by username, enforcing token scope and policy.
+    # Returns account hash with api_key included when viewing own account.
+    # Raises TokenVerifiable::Unauthorized or TokenVerifiable::Forbidden on access failure.
+    def self.find_account_by_username(username, token:)
+      account, scope = extract_auth(token)
+      raise TokenVerifiable::Forbidden, 'Insufficient scope' unless scope.can?('read', 'accounts')
+
+      target = Account.first(username: username)
+      raise TokenVerifiable::Forbidden unless target && AccountPolicy.new(account, target, scope: scope).can_view?
+
+      result = { id: target.id, username: target.username, email: target.email, role: target.role }
+      result[:api_key] = generate_api_key(target) if account.id == target.id
+      result
     end
 
     # Delete an account
