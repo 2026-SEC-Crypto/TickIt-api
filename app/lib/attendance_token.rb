@@ -16,7 +16,7 @@ module TickIt
   #   issued_at   – Unix timestamp when token was created
   #   expires_at  – Unix timestamp after which the token is invalid
   class AttendanceToken
-    DEFAULT_EXPIRY_SECONDS = 180
+    DEFAULT_EXPIRY_SECONDS = 30
 
     class ExpiredToken     < StandardError; end
     class InvalidToken     < StandardError; end
