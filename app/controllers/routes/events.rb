@@ -226,35 +226,43 @@ module TickIt
 
           repeat_weeks = form.values[:repeat_weeks].to_i
 
-          if repeat_weeks >= 2
-            events = TickIt::EventService.create_recurring_events(
-              name: form.values[:name],
-              location: form.values[:location],
-              start_time: form.values[:start_time],
-              end_time: form.values[:end_time],
-              attendance_start_time: form.values[:attendance_start_time],
-              attendance_end_time: form.values[:attendance_end_time],
-              description: form.values[:description],
-              repeat_weeks: repeat_weeks
-            )
-            events.each { |ev| ev.add_collaborator(account) }
-            response.status = 201
+          result = TickIt::DB.transaction do
+            if repeat_weeks >= 2
+              events = TickIt::EventService.create_recurring_events(
+                name: form.values[:name],
+                location: form.values[:location],
+                start_time: form.values[:start_time],
+                end_time: form.values[:end_time],
+                attendance_start_time: form.values[:attendance_start_time],
+                attendance_end_time: form.values[:attendance_end_time],
+                description: form.values[:description],
+                repeat_weeks: repeat_weeks
+              )
+              events.each { |ev| ev.add_collaborator(account) }
+              { type: :recurring, events: events }
+            else
+              event = TickIt::EventService.create_event(
+                name: form.values[:name],
+                location: form.values[:location],
+                start_time: form.values[:start_time],
+                end_time: form.values[:end_time],
+                attendance_start_time: form.values[:attendance_start_time],
+                attendance_end_time: form.values[:attendance_end_time],
+                description: form.values[:description]
+              )
+              event.add_collaborator(account)
+              { type: :single, event: event }
+            end
+          end
+
+          response.status = 201
+          if result[:type] == :recurring
+            events = result[:events]
             { message: "#{repeat_weeks} recurring events created",
               events: events.map(&:to_api_hash),
               series_id: events.first.series_id }.to_json
           else
-            event = TickIt::EventService.create_event(
-              name: form.values[:name],
-              location: form.values[:location],
-              start_time: form.values[:start_time],
-              end_time: form.values[:end_time],
-              attendance_start_time: form.values[:attendance_start_time],
-              attendance_end_time: form.values[:attendance_end_time],
-              description: form.values[:description]
-            )
-            event.add_collaborator(account)
-            response.status = 201
-            { message: 'Event created', event: event.to_api_hash }.to_json
+            { message: 'Event created', event: result[:event].to_api_hash }.to_json
           end
         rescue JSON::ParserError
           response.status = 400
