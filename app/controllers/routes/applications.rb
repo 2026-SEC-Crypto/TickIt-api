@@ -31,11 +31,21 @@ module TickIt
             next({ error: 'Forbidden: only regular users can apply' }.to_json)
           end
 
-          application = TickIt::TeacherApplicationService.apply(account)
+          body = JSON.parse(r.body.read, symbolize_names: true)
+          application = TickIt::TeacherApplicationService.apply(
+            account,
+            real_name: body[:real_name].to_s,
+            organization: body[:organization].to_s,
+            school_email: body[:school_email].to_s,
+            notes: body[:notes]
+          )
           response.status = 201
           { message: 'Application submitted', application: application.api_hash }.to_json
+        rescue JSON::ParserError
+          response.status = 400
+          { error: 'Invalid JSON format' }.to_json
         rescue ArgumentError => e
-          response.status = 409
+          response.status = 422
           { error: e.message }.to_json
         end
       end
@@ -74,8 +84,12 @@ module TickIt
             next({ error: 'Application not found' }.to_json)
           end
 
-          TickIt::TeacherApplicationService.reject(application)
+          body = JSON.parse(r.body.read, symbolize_names: true)
+          TickIt::TeacherApplicationService.reject(application, reason: body[:reason])
           { message: 'Application rejected', application: application.api_hash }.to_json
+        rescue JSON::ParserError
+          response.status = 400
+          { error: 'Invalid JSON format' }.to_json
         rescue ArgumentError => e
           response.status = 409
           { error: e.message }.to_json
