@@ -3,6 +3,20 @@
 module TickIt
   class Api < Roda
     route('applications') do |r|
+      r.get 'mine' do
+        account = account_from_token
+        if account.nil?
+          response.status = 401
+          next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
+        end
+
+        application = TickIt::TeacherApplication
+                        .where(account_id: account.id)
+                        .order(Sequel.desc(:created_at))
+                        .first
+        { application: application ? application.api_hash : nil }.to_json
+      end
+
       r.is do
         r.get do
           account = account_from_token
