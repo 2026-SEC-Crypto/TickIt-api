@@ -14,9 +14,11 @@ Dir.glob(File.expand_path('../policies/*.rb', __dir__)).each { |f| require f }
 require_relative '../models/event'
 require_relative '../models/attendance_record'
 require_relative '../models/account'
+require_relative '../models/teacher_application'
 require_relative '../services/event_service'
 require_relative '../services/account_service'
 require_relative '../services/attendance_record_service'
+require_relative '../services/teacher_application_service'
 require_relative '../services/session_service'
 require_relative '../services/authorization_service'
 require_relative '../services/sso_service'
@@ -90,12 +92,13 @@ module TickIt
             end
           end
           # 將請求分發給對應的子檔案處理
-          r.on('events')      { r.route 'events' }
-          r.on('attendances') { r.route 'attendances' }
-          r.on('students')    { r.route 'students' }
-          r.on('accounts')    { r.route 'accounts' }
-          r.on('account')     { r.route 'account_by_username' }
-          r.on('auth')        { r.route 'auth' }
+          r.on('events')       { r.route 'events' }
+          r.on('attendances')  { r.route 'attendances' }
+          r.on('students')     { r.route 'students' }
+          r.on('accounts')     { r.route 'accounts' }
+          r.on('account')      { r.route 'account_by_username' }
+          r.on('auth')         { r.route 'auth' }
+          r.on('applications') { r.route 'applications' }
         end
 
         response.status = 404
