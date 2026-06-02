@@ -12,6 +12,10 @@ module TickIt
       scope_allows_read?('applications') && (view_own? || view_all?)
     end
 
+    def can_list_all?
+      scope_allows_read?('applications') && admin?
+    end
+
     def can_approve?
       scope_allows_write?('applications') && admin?
     end

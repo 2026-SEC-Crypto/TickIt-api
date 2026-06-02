@@ -11,7 +11,7 @@ module TickIt
             next({ error: 'Unauthorized: valid Bearer token required' }.to_json)
           end
 
-          unless TickIt::TeacherApplicationPolicy.new(account, nil, scope: scope_from_token).view_all?
+          unless TickIt::TeacherApplicationPolicy.new(account, nil, scope: scope_from_token).can_list_all?
             response.status = 403
             next({ error: 'Forbidden: admin only' }.to_json)
           end
