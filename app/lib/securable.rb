@@ -2,6 +2,7 @@
 
 require 'openssl'
 require 'base64'
+require 'securerandom'
 
 module TickIt
   # Reusable encryption/decryption module for sensitive data
