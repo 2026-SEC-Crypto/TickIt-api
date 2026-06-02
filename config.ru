@@ -2,10 +2,22 @@
 
 require_relative 'app/controllers/app'
 require 'dotenv'
-Dotenv.load # This loads the variables from your .env file into ENV
+require 'rack/cors'
 
-# Mount the web application at root '/'
-# Mount the API at '/api/v1'
+Dotenv.load
+
+web_origin = ENV.fetch('WEB_APP_URL', 'http://localhost:9292')
+
+use Rack::Cors do
+  allow do
+    origins web_origin, 'http://localhost:9292', 'http://localhost:3000'
+    resource '/api/*',
+             headers: :any,
+             methods: %i[get post patch put delete options],
+             credentials: false
+  end
+end
+
 run Rack::URLMap.new(
   '/api' => TickIt::Api.freeze.app
 )
