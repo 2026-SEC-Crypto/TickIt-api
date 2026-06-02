@@ -8,12 +8,12 @@ module TickIt
 
     # Returns distance in metres between two lat/lng pairs.
     def self.meters(lat1, lng1, lat2, lng2)
-      φ1 = lat1 * Math::PI / 180
-      φ2 = lat2 * Math::PI / 180
-      Δφ = (lat2 - lat1) * Math::PI / 180
-      Δλ = (lng2 - lng1) * Math::PI / 180
+      phi1   = lat1 * Math::PI / 180
+      phi2   = lat2 * Math::PI / 180
+      d_phi  = (lat2 - lat1) * Math::PI / 180
+      d_lam  = (lng2 - lng1) * Math::PI / 180
 
-      a = Math.sin(Δφ / 2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2)**2
+      a = Math.sin(d_phi / 2)**2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(d_lam / 2)**2
       EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     end
 
