@@ -16,19 +16,17 @@ module TickIt
   #   issued_at   – Unix timestamp when token was created
   #   expires_at  – Unix timestamp after which the token is invalid
   class AttendanceToken
-    DEFAULT_EXPIRY_SECONDS = 15
+    DEFAULT_EXPIRY_SECONDS = 180
 
     class ExpiredToken     < StandardError; end
     class InvalidToken     < StandardError; end
 
-    def self.generate(event_id:, teacher_lat:, teacher_lng:, expires_in: DEFAULT_EXPIRY_SECONDS)
+    def self.generate(event_id:, expires_in: DEFAULT_EXPIRY_SECONDS)
       now = Time.now.to_i
       payload = {
-        event_id:    event_id,
-        teacher_lat: teacher_lat.to_f,
-        teacher_lng: teacher_lng.to_f,
-        issued_at:   now,
-        expires_at:  now + expires_in
+        event_id:   event_id,
+        issued_at:  now,
+        expires_at: now + expires_in
       }
       Securable.encrypt(payload.to_json)
     end

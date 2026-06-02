@@ -12,18 +12,11 @@ module TickIt
           end
 
           body = JSON.parse(r.body.read, symbolize_names: true)
-          raw_token  = body[:token].to_s
-          student_lat = body[:lat].to_f
-          student_lng = body[:lng].to_f
+          raw_token = body[:token].to_s
 
           if raw_token.empty?
             response.status = 422
             next({ error: 'Attendance token is required' }.to_json)
-          end
-
-          if student_lat.zero? && student_lng.zero?
-            response.status = 422
-            next({ error: 'Valid GPS coordinates (lat, lng) are required' }.to_json)
           end
 
           # Verify token (raises ExpiredToken or InvalidToken)
@@ -42,17 +35,6 @@ module TickIt
           unless att_start && att_end && now >= att_start && now <= att_end
             response.status = 422
             next({ error: 'Outside the event attendance window' }.to_json)
-          end
-
-          # GPS distance check
-          distance = TickIt::GpsDistance.meters(
-            student_lat, student_lng,
-            payload[:teacher_lat], payload[:teacher_lng]
-          ).round(1)
-
-          unless TickIt::GpsDistance.within_range?(student_lat, student_lng, payload[:teacher_lat], payload[:teacher_lng])
-            response.status = 422
-            next({ error: "Too far from the teacher (#{distance}m away, max #{TickIt::GpsDistance::MAX_ATTENDANCE_METERS}m)" }.to_json)
           end
 
           # Duplicate check

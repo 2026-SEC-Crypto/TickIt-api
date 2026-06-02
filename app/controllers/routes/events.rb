@@ -101,20 +101,7 @@ module TickIt
             next({ error: "Outside attendance window (#{att_start.iso8601} – #{att_end.iso8601})" }.to_json)
           end
 
-          body = JSON.parse(r.body.read, symbolize_names: true)
-          teacher_lat = body[:lat].to_f
-          teacher_lng = body[:lng].to_f
-
-          if teacher_lat.zero? && teacher_lng.zero?
-            response.status = 422
-            next({ error: 'Valid GPS coordinates (lat, lng) are required' }.to_json)
-          end
-
-          token = TickIt::AttendanceToken.generate(
-            event_id:    event.id,
-            teacher_lat: teacher_lat,
-            teacher_lng: teacher_lng
-          )
+          token = TickIt::AttendanceToken.generate(event_id: event.id)
 
           proto    = request.env.fetch('HTTP_X_FORWARDED_PROTO', request.scheme)
           base_url = "#{proto}://#{request.env['HTTP_HOST']}"
