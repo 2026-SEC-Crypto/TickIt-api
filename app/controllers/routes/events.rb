@@ -81,6 +81,56 @@ module TickIt
           next({ error: 'Event not found' }.to_json)
         end
 
+        r.post 'start_attendance' do
+          unless TickIt::EventPolicy.new(account, event, scope: scope_from_token).can_update?
+            response.status = 403
+            next({ error: 'Forbidden: only event teachers or admins can start attendance' }.to_json)
+          end
+
+          now       = Time.now
+          att_start = event.attendance_start_time
+          att_end   = event.attendance_end_time
+
+          if att_start.nil? || att_end.nil?
+            response.status = 422
+            next({ error: 'This event has no attendance window configured' }.to_json)
+          end
+
+          unless now >= att_start && now <= att_end
+            response.status = 422
+            next({ error: "Outside attendance window (#{att_start.iso8601} – #{att_end.iso8601})" }.to_json)
+          end
+
+          body = JSON.parse(r.body.read, symbolize_names: true)
+          teacher_lat = body[:lat].to_f
+          teacher_lng = body[:lng].to_f
+
+          if teacher_lat.zero? && teacher_lng.zero?
+            response.status = 422
+            next({ error: 'Valid GPS coordinates (lat, lng) are required' }.to_json)
+          end
+
+          token = TickIt::AttendanceToken.generate(
+            event_id:    event.id,
+            teacher_lat: teacher_lat,
+            teacher_lng: teacher_lng
+          )
+
+          proto    = request.env.fetch('HTTP_X_FORWARDED_PROTO', request.scheme)
+          base_url = "#{proto}://#{request.env['HTTP_HOST']}"
+          scan_url = TickIt::AttendanceToken.scan_url(token, base_url: base_url)
+
+          {
+            token:      token,
+            scan_url:   scan_url,
+            expires_in: TickIt::AttendanceToken::DEFAULT_EXPIRY_SECONDS,
+            event:      { id: event.id, name: event.name }
+          }.to_json
+        rescue JSON::ParserError
+          response.status = 400
+          { error: 'Invalid JSON format' }.to_json
+        end
+
         r.get do
           attendees = TickIt::AttendanceRecord
             .where(event_id: event.id)

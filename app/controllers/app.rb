@@ -8,6 +8,7 @@ require_relative '../../config/environments'
 require_relative '../lib/security_log'
 require_relative '../lib/auth_token'
 require_relative '../lib/auth_scope'
+require_relative '../lib/attendance_token'
 
 Dir.glob(File.expand_path('../forms/*.rb', __dir__)).each { |f| require f }
 Dir.glob(File.expand_path('../policies/*.rb', __dir__)).each { |f| require f }
