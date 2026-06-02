@@ -25,6 +25,8 @@ module TickIt
 
     # If an event is deleted, just remove the links in the join table, do not destroy the user accounts!
     add_association_dependencies collaborators: :nullify
+    # If an event is deleted, delete all associated attendance records
+    add_association_dependencies attendance_records: :destroy
     # Keep writable columns explicit to prevent mass assignment abuse.
     set_allowed_columns :name, :description, :location, :start_time, :end_time,
                         :attendance_start_time, :attendance_end_time, :series_id
