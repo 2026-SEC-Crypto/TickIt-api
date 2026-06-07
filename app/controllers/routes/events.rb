@@ -217,7 +217,8 @@ module TickIt
           end
 
           body = JSON.parse(r.body.read)
-          form = TickIt::EventForm.new.call(body)
+          verified_data = TickIt::SignedRequest.verify(body)
+          form = TickIt::EventForm.new.call(verified_data)
 
           unless form.success?
             response.status = 400
@@ -271,6 +272,9 @@ module TickIt
           response.status = 400
           { error: e.message }.to_json
         end
+        rescue TickIt::SignedRequest::InvalidSignature
+          response.status = 401
+          { error: 'Invalid request signature' }.to_json
       end
     end
   end

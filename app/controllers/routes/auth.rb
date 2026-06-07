@@ -7,7 +7,8 @@ module TickIt
       r.on 'authenticate' do
         r.post do
           body = JSON.parse(r.body.read)
-          form = TickIt::AuthenticateForm.new.call(body)
+          verified_data = TickIt::SignedRequest.verify(body)
+          form = TickIt::AuthenticateForm.new.call(verified_data)
 
           unless form.success?
             response.status = 400
@@ -39,13 +40,17 @@ module TickIt
           response.status = 400
           { error: 'Invalid JSON format' }.to_json
         end
+        rescue TickIt::SignedRequest::InvalidSignature
+          response.status = 401
+          { error: 'Invalid request signature' }.to_json
       end
 
       # POST /api/v1/auth/register
       r.on 'register' do
         r.post do
           body = JSON.parse(r.body.read)
-          form = TickIt::RegisterForm.new.call(body)
+          verified_data = TickIt::SignedRequest.verify(body)
+          form = TickIt::RegisterForm.new.call(verified_data)
 
           unless form.success?
             response.status = 400
@@ -78,13 +83,17 @@ module TickIt
           response.status = status
           { error: e.message }.to_json
         end
+        rescue TickIt::SignedRequest::InvalidSignature
+          response.status = 401
+          { error: 'Invalid request signature' }.to_json
       end
 
       # POST /api/v1/auth/sso
       r.on 'sso' do
         r.post do
           body = JSON.parse(r.body.read)
-          form = TickIt::SsoForm.new.call(body)
+          verified_data = TickIt::SignedRequest.verify(body)
+          form = TickIt::SsoForm.new.call(verified_data)
 
           unless form.success?
             response.status = 400
@@ -126,6 +135,9 @@ module TickIt
           response.status = 400
           { error: 'Invalid JSON format' }.to_json
         end
+        rescue TickIt::SignedRequest::InvalidSignature
+          response.status = 401
+          { error: 'Invalid request signature' }.to_json
       end
 
       r.on 'api_key' do
