@@ -24,6 +24,7 @@ require_relative '../services/teacher_application_service'
 require_relative '../services/session_service'
 require_relative '../services/authorization_service'
 require_relative '../services/sso_service'
+require_relative '../lib/signed_request'
 
 module TickIt
   class Api < Roda
