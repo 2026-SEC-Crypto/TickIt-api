@@ -149,6 +149,74 @@ namespace :db do
       puts "Tables: #{TickIt::DB.tables.join(', ')}"
     end
   end
+  desc 'Re-encrypt secure_email and secure_location from AES-256-GCM to RbNaCl::SecretBox'
+  task migrate_encryption: %i[load load_models] do
+    require 'openssl'
+    require 'base64'
+    require 'rbnacl'
+
+    raw_key = ENV.fetch('ENCRYPTION_KEY')
+
+    # Old AES-256-GCM decryption (inlined — Securable now uses SecretBox)
+    aes_key_bytes = raw_key.length == 32 ? raw_key.bytes : OpenSSL::Digest::SHA256.digest(raw_key).bytes
+    aes_decrypt = lambda do |encrypted_value|
+      data       = Base64.strict_decode64(encrypted_value)
+      nonce      = data[0...12]
+      auth_tag   = data[-16..]
+      ciphertext = data[12...-16]
+      cipher = OpenSSL::Cipher.new('aes-256-gcm').tap do |c|
+        c.decrypt
+        c.key      = aes_key_bytes.pack('C*')
+        c.iv       = nonce
+        c.auth_tag = auth_tag
+      end
+      cipher.update(ciphertext) + cipher.final
+    end
+
+    # New RbNaCl::SecretBox encrypt
+    nacl_key = OpenSSL::Digest::SHA256.digest(raw_key)
+    nacl_encrypt = lambda do |plaintext|
+      box   = RbNaCl::SecretBox.new(nacl_key)
+      nonce = RbNaCl::Random.random_bytes(RbNaCl::SecretBox.nonce_bytes)
+      Base64.strict_encode64(nonce + box.box(nonce, plaintext))
+    end
+
+    migrated = 0
+    errors   = 0
+
+    puts '=== Migrating accounts.secure_email ==='
+    TickIt::DB[:accounts].each do |row|
+      next if row[:secure_email].nil? || row[:secure_email].empty?
+
+      begin
+        plain = aes_decrypt.call(row[:secure_email])
+        TickIt::DB[:accounts].where(id: row[:id]).update(secure_email: nacl_encrypt.call(plain))
+        migrated += 1
+        puts "  account #{row[:id]}: ok"
+      rescue StandardError => e
+        errors += 1
+        puts "  account #{row[:id]}: FAILED — #{e.message}"
+      end
+    end
+
+    puts '=== Migrating events.secure_location ==='
+    TickIt::DB[:events].each do |row|
+      next if row[:secure_location].nil? || row[:secure_location].empty?
+
+      begin
+        plain = aes_decrypt.call(row[:secure_location])
+        TickIt::DB[:events].where(id: row[:id]).update(secure_location: nacl_encrypt.call(plain))
+        migrated += 1
+        puts "  event #{row[:id]}: ok"
+      rescue StandardError => e
+        errors += 1
+        puts "  event #{row[:id]}: FAILED — #{e.message}"
+      end
+    end
+
+    puts "Done: #{migrated} migrated, #{errors} errors"
+  end
+
   desc 'Bootstrap an admin: create-or-find EMAIL, grant admin role'
   task bootstrap_admin: %i[load load_models] do
     require 'digest'
